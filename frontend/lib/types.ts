@@ -1,7 +1,7 @@
 // Shared types for the prompt library
 
 export type PromptStats = {
-  stars: number;
+  upvotes: number;
   forks: number;
   views: number;
 };
@@ -55,7 +55,7 @@ export type TrendingDeveloper = {
   displayName?: string;
   avatarUrl?: string;
   promptCount: number;
-  totalStars: number;
+  totalUpvotes: number;
   totalForks: number;
   totalViews: number;
 };
@@ -83,7 +83,7 @@ export type DiscussionAnswer = {
 
 export type Notification = {
   id: string;
-  type: "pr_review" | "star" | "fork" | "comment" | "mention" | "merge";
+  type: "pr_review" | "upvote" | "fork" | "comment" | "mention" | "merge";
   title: string;
   body?: string;
   link: string;

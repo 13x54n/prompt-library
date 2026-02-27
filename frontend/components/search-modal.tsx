@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Search, X, Users, FileText, MessageSquare, Star } from "lucide-react";
+import { Search, X, Users, FileText, MessageSquare, ArrowUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/user-avatar";
 import type { Prompt, TrendingDeveloper, DiscussionQuestion } from "@/lib/types";
 
 type SearchModalProps = {
@@ -101,15 +103,15 @@ export function SearchModal({
 
   if (!open) return null;
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4"
+      className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] px-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="search-modal-title"
     >
       <div
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-background"
         onClick={onClose}
         aria-hidden
       />
@@ -158,13 +160,15 @@ export function SearchModal({
                     onClick={onClose}
                     className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
                   >
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                      {dev.displayName?.charAt(0) ?? dev.username.charAt(0)}
-                    </div>
+                    <UserAvatar
+                      photoURL={dev.avatarUrl ?? null}
+                      name={dev.displayName ?? dev.username}
+                      size="sm"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">@{dev.username}</p>
                       <p className="text-xs text-muted-foreground">
-                        {dev.promptCount} prompts · {(dev.totalStars / 1000).toFixed(1)}k ★
+                        {dev.promptCount} prompts · {(dev.totalUpvotes / 1000).toFixed(1)}k ↑
                       </p>
                     </div>
                   </Link>
@@ -199,8 +203,8 @@ export function SearchModal({
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                       <span>@{prompt.username}</span>
                       <span className="flex items-center gap-1">
-                        <Star className="size-3" />
-                        {prompt.stats.stars.toLocaleString()}
+                        <ArrowUp className="size-3" />
+                        {prompt.stats.upvotes.toLocaleString()}
                       </span>
                     </div>
                   </Link>
@@ -246,4 +250,6 @@ export function SearchModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

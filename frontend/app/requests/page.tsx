@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { MessageCircle, Eye } from "lucide-react";
 import type { PromptRequest } from "@/lib/types";
+
+export const metadata: Metadata = {
+  title: "Request Prompt",
+  description:
+    "Ask the community for prompts. Stack Overflow-style Q&A. Describe what you need and get answers from other developers.",
+};
 
 const MOCK_REQUESTS: PromptRequest[] = [
   {

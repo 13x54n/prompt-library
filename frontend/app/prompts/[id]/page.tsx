@@ -1,5 +1,6 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronDown, BarChart3, Users } from "lucide-react";
+import { ChevronDown, BarChart3, Users, Coffee } from "lucide-react";
 import {
   PromptHeader,
   VariantCard,
@@ -7,6 +8,7 @@ import {
   DiscussionSection,
 } from "@/components/prompt-library";
 import { PullRequestsSidebar } from "@/components/pull-requests-sidebar";
+import { UserAvatar } from "@/components/user-avatar";
 import type { Prompt, DiscussionQuestion, DiscussionAnswer } from "@/lib/types";
 
 // Mock data - replace with API/fetch
@@ -16,7 +18,7 @@ const MOCK_PROMPT: Prompt = {
   description:
     "Complete technical + content SEO audit for Next.js App Router projects. Covers meta tags, structured data, sitemaps, and content gaps.",
   tags: ["nextjs", "seo", "app-router", "checklist"],
-  stats: { stars: 2300, forks: 847, views: 12000 },
+  stats: { upvotes: 2300, forks: 847, views: 12000 },
   lastUpdated: "2h ago",
   username: "seo_ninja",
   primaryPrompt: `Analyze my Next.js App Router project for SEO issues.
@@ -136,6 +138,28 @@ const MOCK_PULL_REQUESTS = [
   { id: "pr2", title: "Support for i18n meta tags", author: "i18n_dev", status: "open", createdAt: "1w ago" },
 ];
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const prompt = MOCK_PROMPT; // In real app: fetch by id
+  return {
+    title: prompt.title,
+    description: prompt.description,
+    openGraph: {
+      title: prompt.title,
+      description: prompt.description,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: prompt.title,
+      description: prompt.description,
+    },
+  };
+}
+
 export default async function PromptDetailPage({
   params,
 }: {
@@ -178,6 +202,7 @@ export default async function PromptDetailPage({
 
           {/* Right sidebar: Contributors & Insights - fixed, does not scroll */}
           <aside className="order-3 shrink-0 self-start space-y-6 lg:sticky lg:top-0">
+            
             <div>
               <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <BarChart3 className="size-4" />
@@ -193,8 +218,8 @@ export default async function PromptDetailPage({
                   <span className="font-medium">{prompt.stats.forks.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Stars</span>
-                  <span className="font-medium">{prompt.stats.stars.toLocaleString()}</span>
+                  <span className="text-muted-foreground">Upvotes</span>
+                  <span className="font-medium">{prompt.stats.upvotes.toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -211,9 +236,11 @@ export default async function PromptDetailPage({
                       href={`/profile/${c.username}`}
                       className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
                     >
-                      <div className="flex size-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                        {c.username.charAt(0).toUpperCase()}
-                      </div>
+                      <UserAvatar
+                        photoURL={c.avatar ?? null}
+                        name={c.username}
+                        size="sm"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium">@{c.username}</p>
                         <p className="text-xs text-muted-foreground">{c.contributions} contributions</p>
@@ -223,6 +250,16 @@ export default async function PromptDetailPage({
                 </div>
               </div>
             </div>
+
+            <a
+              href={`https://buymeacoffee.com/${prompt.username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400 dark:hover:bg-amber-500/15"
+            >
+              <Coffee className="size-4" />
+              Sponsor @{prompt.username}
+            </a>
           </aside>
       </div>
     </div>

@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+export const metadata: Metadata = {
+  title: "Request a Prompt",
+  description:
+    "Ask the community for a prompt. Describe what you need, your tech stack, and get help from other developers.",
+};
 
 export default function NewRequestPage() {
   return (

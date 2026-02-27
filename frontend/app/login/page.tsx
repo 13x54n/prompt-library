@@ -1,6 +1,13 @@
-import { GalleryVerticalEnd } from "lucide-react"
+import type { Metadata } from "next";
+import { GalleryVerticalEnd } from "lucide-react";
 
-import { LoginForm } from "@/components/login-form"
+import { LoginForm } from "@/components/login-form";
+
+export const metadata: Metadata = {
+  title: "Sign In",
+  description: "Sign in to Prompt Library to save prompts, contribute variants, and join the community.",
+  robots: { index: false, follow: true },
+};
 
 export default function LoginPage() {
   return (

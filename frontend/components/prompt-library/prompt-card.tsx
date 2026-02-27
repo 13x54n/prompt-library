@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { Star, GitFork } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { TagChip } from "./tag-chip";
 import { PromptStats } from "./prompt-stats";
+import { ActivityLineChart } from "./activity-line-chart";
 import { cn } from "@/lib/utils";
 import type { Prompt } from "@/lib/types";
 
@@ -15,15 +14,12 @@ export function PromptCard({ prompt, className }: PromptCardProps) {
   return (
     <article
       className={cn(
-        "group flex flex-col gap-3 border-b border-border py-4 last:border-b-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4 px-4",
+        "group flex flex-col gap-3 border-b border-border py-4 last:border-b-0 sm:flex-row sm:items-start sm:justify-center sm:gap-4 px-4",
         className
       )}
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground" aria-hidden>
-            📂
-          </span>
           <Link
             href={`/prompts/${prompt.id}`}
             className="truncate font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
@@ -39,15 +35,37 @@ export function PromptCard({ prompt, className }: PromptCardProps) {
             <TagChip key={tag} tag={tag} href={`/explore?tag=${tag}`} />
           ))}
         </div>
+        {/* contributor */}
+        <div className="mt-2 flex items-center gap-2">
+          <p className="text-xs text-muted-foreground">
+            Contributed by <Link href={`/profile/${prompt.username}`} className="text-muted-foreground hover:underline">@{prompt.username}</Link>
+          </p>
+        </div>
       </div>
 
-      <div className="flex shrink-0 flex-col items-end gap-2 sm:items-end">
+      <div className="flex shrink-0 flex-col items-center gap-2 w-fit">
         <PromptStats
-          stars={prompt.stats.stars}
+          upvotes={prompt.stats.upvotes}
           forks={prompt.stats.forks}
           views={prompt.stats.views}
         />
-        
+        <div className="w-full min-w-0">
+          <ActivityLineChart
+          data={[
+            prompt.stats.views * 0,
+            prompt.stats.views * 0,
+            prompt.stats.views * 0.4,
+            prompt.stats.views * 0.85,
+            prompt.stats.views * 0.5,
+            prompt.stats.views * 0.7,
+            prompt.stats.views * 0.7,
+            prompt.stats.views * 0.7,
+            prompt.stats.views * 0.72,
+            prompt.stats.views * 0,
+            prompt.stats.views,
+          ]}
+          />
+        </div>
       </div>
     </article>
   );

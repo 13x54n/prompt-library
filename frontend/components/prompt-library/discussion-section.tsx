@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, MessageSquare, ThumbsUp, Check } from "lucide-react";
+import { ChevronDown, MessageSquare, ArrowUp, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { DiscussionQuestion, DiscussionAnswer } from "@/lib/types";
@@ -33,7 +33,7 @@ function QuestionItem({
       >
         <div className="flex shrink-0 flex-col items-center gap-1">
           <span className="flex items-center gap-1 text-sm font-medium">
-            <ThumbsUp className="size-4 text-muted-foreground" />
+            <ArrowUp className="size-4 text-muted-foreground" />
             {question.votes}
           </span>
           <span className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -59,7 +59,7 @@ function QuestionItem({
       </button>
 
       {isExpanded && (
-        <div className="border-t border-border p-4 pt-0">
+        <div className="border-t border-border p-4">
           <div className="space-y-4 pl-12">
             {answers.map((answer) => (
               <div
@@ -85,7 +85,7 @@ function QuestionItem({
                     @{answer.author}
                   </span>
                   <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <ThumbsUp className="size-4" />
+                    <ArrowUp className="size-4" />
                     {answer.votes}
                   </span>
                 </div>

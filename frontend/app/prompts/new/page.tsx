@@ -85,7 +85,7 @@ export default function CreatePromptPage() {
                   prompt={{
                     title,
                     description: "Complete technical...",
-                    stats: { stars: 2300, forks: 847, views: 0 },
+                    stats: { upvotes: 2300, forks: 847, views: 0 },
                     username: "you",
                   }}
                 />

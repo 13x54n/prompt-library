@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { GitMerge, Star, GitFork, MessageCircle, AtSign, Bell } from "lucide-react";
+import { GitMerge, ArrowUp, GitFork, MessageCircle, AtSign, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/lib/types";
+
+export const metadata: Metadata = {
+  title: "Notifications",
+  description: "Your Prompt Library notifications. PR reviews, upvotes, comments, and more.",
+  robots: { index: false, follow: true },
+};
 
 const MOCK_NOTIFICATIONS: Notification[] = [
   {
@@ -16,9 +23,9 @@ const MOCK_NOTIFICATIONS: Notification[] = [
   },
   {
     id: "2",
-    type: "star",
-    title: "New star on your prompt",
-    body: "debugguru starred Prompt Library",
+    type: "upvote",
+    title: "New upvote on your prompt",
+    body: "debugguru upvoted Prompt Library",
     link: "/prompts/1",
     read: false,
     createdAt: "1h ago",
@@ -48,7 +55,7 @@ const MOCK_NOTIFICATIONS: Notification[] = [
 
 const typeIcons: Record<Notification["type"], React.ComponentType<{ className?: string }>> = {
   pr_review: MessageCircle,
-  star: Star,
+  upvote: ArrowUp,
   fork: GitFork,
   comment: MessageCircle,
   mention: AtSign,
@@ -68,7 +75,7 @@ export default function NotificationsPage() {
           <Bell className="mx-auto mb-4 size-12 opacity-50" />
           <p className="font-medium">No notifications yet</p>
           <p className="mt-1 text-sm">
-            When someone stars your prompt, comments, or requests a review, you&apos;ll see it here.
+            When someone upvotes your prompt, comments, or requests a review, you&apos;ll see it here.
           </p>
         </div>
       ) : (

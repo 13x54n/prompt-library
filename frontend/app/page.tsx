@@ -1,52 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { TrendingUp, Users } from "lucide-react";
 import { PromptCard } from "@/components/prompt-library";
 import { TrendingDeveloperCard } from "@/components/trending-developer-card";
-import { SearchBar } from "@/components/search-bar";
-import type { Prompt, TrendingDeveloper } from "@/lib/types";
+import { MOCK_PROMPTS, MOCK_TRENDING_DEVS } from "@/lib/mock-data";
 
-const MOCK_PROMPTS: Pick<
-  Prompt,
-  "id" | "title" | "description" | "tags" | "stats" | "lastUpdated" | "username"
->[] = [
-    {
-      id: "1",
-      title: "Prompt Library",
-      description: "Complete Next.js App Router SEO audit + content gaps",
-      tags: ["nextjs", "seo", "checklist", "2026"],
-      stats: { stars: 2300, forks: 847, views: 12000 },
-      lastUpdated: "2h ago",
-      username: "username",
-    },
-    {
-      id: "2",
-      title: "Debug React Suspense",
-      description: "Find/fix Suspense fallback hydration bugs",
-      tags: ["react", "suspense", "debug", "hydration"],
-      stats: { stars: 1200, forks: 234, views: 5600 },
-      lastUpdated: "1d ago",
-      username: "debugguru",
-    },
-    {
-      id: "3",
-      title: "AI Prompt Templates",
-      description: "Curated collection of prompts for GPT, Claude, and more",
-      tags: ["ai", "prompts", "llm", "templates"],
-      stats: { stars: 890, forks: 156, views: 3400 },
-      lastUpdated: "3d ago",
-      username: "promptmaster",
-    },
-  ];
-
-const MOCK_TRENDING_DEVS: TrendingDeveloper[] = [
-  { username: "username", promptCount: 12, totalStars: 8500, totalForks: 2100, totalViews: 45000 },
-  { username: "debugguru", promptCount: 8, totalStars: 4200, totalForks: 980, totalViews: 22000 },
-  { username: "promptmaster", promptCount: 15, totalStars: 3100, totalForks: 520, totalViews: 18000 },
-  { username: "seo_ninja", promptCount: 6, totalStars: 5200, totalForks: 1700, totalViews: 23400 },
-];
+export const metadata: Metadata = {
+  title: { absolute: "Explore | Prompt Library" },
+  description:
+    "Browse trending AI prompts and developers. Discover prompts for Next.js, React, TypeScript, and more. Fork, upvote, and contribute to the community.",
+};
 
 const TRENDING_PROMPTS = [...MOCK_PROMPTS].sort(
-  (a, b) => b.stats.stars + b.stats.views - (a.stats.stars + a.stats.views)
+  (a, b) => b.stats.upvotes + b.stats.views - (a.stats.upvotes + a.stats.views)
 );
 
 export default function ExplorePage() {
@@ -68,14 +34,6 @@ export default function ExplorePage() {
 
           {/* Middle: Main prompts */}
           <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto lg:order-2">
-            {/* <h1 className="text-2xl font-bold">Explore</h1>
-            <p className="mt-1 text-muted-foreground mb-4">
-              Discover prompts and templates from the community.
-            </p> */}
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <SearchBar users={MOCK_TRENDING_DEVS} prompts={MOCK_PROMPTS} />
-            </div>
-
             <div className="rounded-lg border border-border bg-card">
               <div className="divide-y divide-border">
                 {MOCK_PROMPTS.map((prompt) => (
@@ -104,7 +62,7 @@ export default function ExplorePage() {
                   </p>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>@{prompt.username}</span>
-                    <span>{prompt.stats.stars.toLocaleString()} ★</span>
+                    <span>{prompt.stats.upvotes.toLocaleString()} ↑</span>
                   </div>
                 </Link>
               ))}

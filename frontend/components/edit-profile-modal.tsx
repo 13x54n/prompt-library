@@ -1,0 +1,197 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth-provider";
+import { updateProfile } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { UserAvatar } from "@/components/user-avatar";
+import { X } from "lucide-react";
+
+type EditProfileModalProps = {
+  open: boolean;
+  onClose: () => void;
+};
+
+export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
+  const router = useRouter();
+  const { user, currentUser, refetchBackendUser } = useAuth();
+  const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
+  const [photoURL, setPhotoURL] = useState("");
+  const [bio, setBio] = useState("");
+  const [website, setWebsite] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !currentUser) return;
+    setDisplayName(currentUser.displayName);
+    setUsername(currentUser.username ?? "");
+    setPhotoURL(currentUser.photoURL ?? "");
+    setBio(currentUser.bio ?? "");
+    setWebsite(currentUser.website ?? "");
+    setError(null);
+  }, [open, currentUser]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [open, onClose]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user) return;
+    setError(null);
+    setSaving(true);
+    try {
+      const token = await user.getIdToken();
+      const payload = {
+        displayName: displayName.trim() || null,
+        username: username.trim() || null,
+        photoURL: photoURL.trim() || null,
+        bio: bio.trim() || null,
+        website: website.trim() || null,
+      };
+      const { updated, errorMessage } = await updateProfile(token, payload, {
+        uid: user.uid,
+        email: user.email ?? "",
+      });
+      if (updated) {
+        await refetchBackendUser();
+        router.refresh();
+        onClose();
+      } else {
+        setError(errorMessage ?? "Failed to update profile");
+      }
+    } catch {
+      setError("Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-profile-title"
+    >
+      <div
+        className="absolute inset-0 bg-black/60"
+        onClick={onClose}
+        onKeyDown={(e) => e.key === "Escape" && onClose()}
+      />
+      <div
+        className="relative z-10 w-full max-w-md rounded-lg border border-border bg-background p-6 shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-6 flex items-center justify-between">
+          <h2 id="edit-profile-title" className="text-xl font-semibold">
+            Edit profile
+          </h2>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <Label>Avatar</Label>
+            <div className="flex items-center gap-4">
+              <UserAvatar
+                photoURL={photoURL || null}
+                name={displayName}
+                size="lg"
+              />
+              <div className="min-w-0 flex-1">
+                <Input
+                  value={photoURL}
+                  onChange={(e) => setPhotoURL(e.target.value)}
+                  placeholder="https://... (image URL)"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="modal-displayName">Display name</Label>
+            <Input
+              id="modal-displayName"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="e.g. Ming Open Web Headquarters"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="modal-username">Username</Label>
+            <Input
+              id="modal-username"
+              value={username}
+              onChange={(e) =>
+                setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))
+              }
+              placeholder="e.g. ming_open_web"
+              minLength={3}
+              maxLength={30}
+            />
+            <p className="text-xs text-muted-foreground">
+              3–30 characters, letters, numbers, underscores, or hyphens.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="modal-bio">Bio</Label>
+            <textarea
+              id="modal-bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="A short bio"
+              rows={3}
+              className="border-input placeholder:text-muted-foreground w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="modal-website">Website</Label>
+            <Input
+              id="modal-website"
+              type="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              placeholder="https://..."
+            />
+          </div>
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

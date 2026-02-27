@@ -1,8 +1,8 @@
-import { Star, GitFork, Eye } from "lucide-react";
+import { ArrowUp, GitFork, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type PromptStatsProps = {
-  stars: number;
+  upvotes: number;
   forks: number;
   views?: number;
   size?: "sm" | "md";
@@ -15,7 +15,7 @@ function formatCount(n: number): string {
 }
 
 export function PromptStats({
-  stars,
+  upvotes,
   forks,
   views = 0,
   size = "sm",
@@ -33,8 +33,8 @@ export function PromptStats({
       )}
     >
       <span className="flex items-center gap-1 [&>svg]:text-amber-500/90 dark:[&>svg]:text-amber-400/90">
-        <Star className={iconClass} aria-hidden />
-        {formatCount(stars)}
+        <ArrowUp className={iconClass} aria-hidden />
+        {formatCount(upvotes)}
       </span>
       <span className="flex items-center gap-1 [&>svg]:text-blue-500/90 dark:[&>svg]:text-blue-400/90">
         <GitFork className={iconClass} aria-hidden />

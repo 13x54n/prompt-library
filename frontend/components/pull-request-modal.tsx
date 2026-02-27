@@ -10,6 +10,7 @@ import {
   GitMerge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/user-avatar";
 import { PromptCodeBlock } from "@/components/prompt-library";
 import { MOCK_PRS } from "@/lib/pull-requests";
 import { useEffect } from "react";
@@ -156,9 +157,11 @@ export function PullRequestModal({ promptId, prId, onClose }: PullRequestModalPr
                 <div className="divide-y divide-border">
                   {pr.comments.map((comment) => (
                     <div key={comment.id} className="flex gap-4 p-4">
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                        {comment.author.charAt(0).toUpperCase()}
-                      </div>
+                      <UserAvatar
+                        photoURL={null}
+                        name={comment.author}
+                        size="sm"
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 text-sm">
                           <Link
