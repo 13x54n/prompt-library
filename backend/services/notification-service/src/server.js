@@ -22,6 +22,9 @@ const allowedOrigins = CORS_ORIGIN.includes(",")
 
 const app = express();
 
+// Trust the first proxy (Nginx) so X-Forwarded-* and rate limiting by client IP work
+app.set("trust proxy", 1);
+
 app.use(
   cors({
     origin(origin, callback) {
