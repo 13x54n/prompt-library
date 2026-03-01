@@ -4,4 +4,6 @@ export { PromptCard } from "./prompt-card";
 export { PromptHeader } from "./prompt-header";
 export { VariantCard } from "./variant-card";
 export { PromptCodeBlock } from "./prompt-code-block";
+export { MarkdownEditor } from "./markdown-editor";
+export { RichTextEditor } from "./rich-text-editor";
 export { DiscussionSection } from "./discussion-section";

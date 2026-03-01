@@ -4,7 +4,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
 import { UserMenu } from "@/components/user-menu";
 import { SearchBar } from "@/components/search-bar";
-import { MOCK_PROMPTS, MOCK_TRENDING_DEVS } from "@/lib/mock-data";
 import "./globals.css";
 import { GalleryVerticalEnd } from "lucide-react";
 
@@ -91,7 +90,7 @@ export default function RootLayout({
 
                 <div className="flex flex-1 items-center justify-end gap-2">
                   <div className="hidden w-1/3 min-w-0 sm:block">
-                    <SearchBar users={MOCK_TRENDING_DEVS} prompts={MOCK_PROMPTS} />
+                    <SearchBar />
                   </div>
                   <UserMenu />
                 </div>

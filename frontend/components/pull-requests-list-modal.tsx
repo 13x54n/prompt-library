@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { GitPullRequest, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MOCK_PRS } from "@/lib/pull-requests";
+import { fetchPullRequests, type ApiPullRequestSummary } from "@/lib/api";
 
 type PullRequestsListModalProps = {
   promptId: string;
@@ -12,10 +12,19 @@ type PullRequestsListModalProps = {
 };
 
 export function PullRequestsListModal({
+  promptId,
   onClose,
   onSelectPr,
 }: PullRequestsListModalProps) {
-  const pullRequests = Object.values(MOCK_PRS);
+  const [pullRequests, setPullRequests] = useState<ApiPullRequestSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPullRequests(promptId).then((result) => {
+      if (result.success) setPullRequests(result.pullRequests);
+      setLoading(false);
+    });
+  }, [promptId]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -66,7 +75,10 @@ export function PullRequestsListModal({
           <p className="mb-4 text-sm text-muted-foreground">
             Proposed changes and improvements to this prompt
           </p>
-          <div className="space-y-2">
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : (
+            <div className="space-y-2">
             {pullRequests.map((pr) => (
               <button
                 key={pr.id}
@@ -77,20 +89,20 @@ export function PullRequestsListModal({
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <h3 className="font-medium">{pr.title}</h3>
-                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                      {pr.body}
-                    </p>
                     <p className="mt-2 text-xs text-muted-foreground">
                       #{pr.id} by @{pr.author} · {pr.createdAt}
-                      {pr.comments.length > 0 &&
-                        ` · ${pr.comments.length} comments`}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {pr.discussionCount ?? 0} discussion{(pr.discussionCount ?? 0) === 1 ? "" : "s"}
                     </p>
                   </div>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                       pr.status === "merged"
                         ? "bg-purple-500/20 text-purple-600 dark:text-purple-400"
-                        : "bg-green-500/20 text-green-600 dark:text-green-400"
+                        : pr.status === "closed"
+                          ? "bg-red-500/20 text-red-600 dark:text-red-400"
+                          : "bg-green-500/20 text-green-600 dark:text-green-400"
                     }`}
                   >
                     {pr.status}
@@ -98,7 +110,8 @@ export function PullRequestsListModal({
                 </div>
               </button>
             ))}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

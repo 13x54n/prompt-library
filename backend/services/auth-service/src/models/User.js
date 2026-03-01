@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const loginRecordSchema = new mongoose.Schema(
   {
     uid: { type: String, required: true },
-    email: { type: String, required: true, index: true },
+    email: { type: String, required: true, lowercase: true, trim: true, index: true },
     username: { type: String, default: null }, // unique handle for profile URL and @mentions
     displayName: { type: String, default: null },
     photoURL: { type: String, default: null },
@@ -19,6 +19,8 @@ const loginRecordSchema = new mongoose.Schema(
 
 // Unique index for upsert by uid
 loginRecordSchema.index({ uid: 1 }, { unique: true });
+// One account per email
+loginRecordSchema.index({ email: 1 }, { unique: true });
 // Username unique, sparse (allow null)
 loginRecordSchema.index({ username: 1 }, { unique: true, sparse: true });
 

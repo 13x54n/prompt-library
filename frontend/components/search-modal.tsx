@@ -7,68 +7,25 @@ import { Search, X, Users, FileText, MessageSquare, ArrowUp } from "lucide-react
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
-import type { Prompt, TrendingDeveloper, DiscussionQuestion } from "@/lib/types";
+import { fetchPrompts, searchDiscussions, searchUsers } from "@/lib/api";
+import type { SearchDiscussion, SearchUser } from "@/lib/api";
+import type { Prompt } from "@/lib/types";
 
 type SearchModalProps = {
   open: boolean;
   onClose: () => void;
-  users: TrendingDeveloper[];
-  prompts: Pick<
-    Prompt,
-    "id" | "title" | "description" | "tags" | "stats" | "lastUpdated" | "username"
-  >[];
-  discussions?: DiscussionQuestion[];
 };
 
-const MOCK_DISCUSSIONS: DiscussionQuestion[] = [
-  {
-    id: "1",
-    title: "How to handle edge cases in SEO audit?",
-    body: "Looking for best practices...",
-    author: "debugguru",
-    createdAt: "2h ago",
-    votes: 5,
-    answerCount: 3,
-  },
-  {
-    id: "2",
-    title: "Suspense fallback not showing",
-    body: "My fallback UI never appears...",
-    author: "seo_ninja",
-    createdAt: "1d ago",
-    votes: 2,
-    answerCount: 1,
-  },
-  {
-    id: "3",
-    title: "Best LLM prompt structure?",
-    body: "What format works best for GPT-4?",
-    author: "promptmaster",
-    createdAt: "3d ago",
-    votes: 8,
-    answerCount: 5,
-  },
-];
-
-function filterByQuery<T>(
-  items: T[],
-  query: string,
-  getSearchText: (item: T) => string
-): T[] {
-  if (!query.trim()) return items;
-  const q = query.toLowerCase().trim();
-  return items.filter((item) => getSearchText(item).toLowerCase().includes(q));
-}
-
-export function SearchModal({
-  open,
-  onClose,
-  users,
-  prompts,
-  discussions = MOCK_DISCUSSIONS,
-}: SearchModalProps) {
+export function SearchModal({ open, onClose }: SearchModalProps) {
   const [query, setQuery] = useState("");
+  const [users, setUsers] = useState<SearchUser[]>([]);
+  const [prompts, setPrompts] = useState<
+    Pick<Prompt, "id" | "title" | "description" | "tags" | "stats" | "lastUpdated" | "username">[]
+  >([]);
+  const [discussions, setDiscussions] = useState<SearchDiscussion[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const trimmedQuery = query.trim();
+  const shouldSearch = open && trimmedQuery.length > 0;
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -86,20 +43,22 @@ export function SearchModal({
   }, [onClose, open]);
 
   useEffect(() => {
-    if (!open) setQuery("");
-  }, [open]);
+    if (!shouldSearch) return;
 
-  const filteredUsers = filterByQuery(users, query, (u) => u.username);
-  const filteredPrompts = filterByQuery(
-    prompts,
-    query,
-    (p) => `${p.title} ${p.description} ${p.tags.join(" ")}`
-  );
-  const filteredDiscussions = filterByQuery(
-    discussions,
-    query,
-    (d) => `${d.title} ${d.body} ${d.author}`
-  );
+    const timer = setTimeout(async () => {
+      const [usersRes, promptsRes, discussionsRes] = await Promise.all([
+        searchUsers(trimmedQuery, 8),
+        fetchPrompts({ q: trimmedQuery, sort: "createdAt", limit: 8 }),
+        searchDiscussions(trimmedQuery, 8),
+      ]);
+
+      setUsers(usersRes.success ? usersRes.users : []);
+      setPrompts(promptsRes.success ? promptsRes.prompts : []);
+      setDiscussions(discussionsRes.success ? discussionsRes.discussions : []);
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [shouldSearch, trimmedQuery]);
 
   if (!open) return null;
 
@@ -148,28 +107,26 @@ export function SearchModal({
               <span className="text-sm font-medium">Users</span>
             </div>
             <div className="divide-y divide-border">
-              {filteredUsers.length === 0 ? (
+              {!shouldSearch || users.length === 0 ? (
                 <p className="px-4 py-6 text-center text-sm text-muted-foreground">
                   No users found
                 </p>
               ) : (
-                filteredUsers.map((dev) => (
+                users.map((dev) => (
                   <Link
-                    key={dev.username}
-                    href={`/profile/${encodeURIComponent(dev.username)}`}
+                    key={dev.uid}
+                    href={`/profile/${encodeURIComponent(dev.uid ?? dev.username ?? "")}`}
                     onClick={onClose}
                     className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
                   >
                     <UserAvatar
-                      photoURL={dev.avatarUrl ?? null}
-                      name={dev.displayName ?? dev.username}
+                      photoURL={dev.photoURL ?? null}
+                      name={dev.displayName ?? dev.username ?? "User"}
                       size="sm"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">@{dev.username}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {dev.promptCount} prompts · {(dev.totalUpvotes / 1000).toFixed(1)}k ↑
-                      </p>
+                      <p className="truncate text-sm font-medium">@{dev.username ?? dev.uid}</p>
+                      <p className="truncate text-xs text-muted-foreground">{dev.bio || "Developer profile"}</p>
                     </div>
                   </Link>
                 ))
@@ -184,12 +141,12 @@ export function SearchModal({
               <span className="text-sm font-medium">Prompts</span>
             </div>
             <div className="divide-y divide-border">
-              {filteredPrompts.length === 0 ? (
+              {!shouldSearch || prompts.length === 0 ? (
                 <p className="px-4 py-6 text-center text-sm text-muted-foreground">
                   No prompts found
                 </p>
               ) : (
-                filteredPrompts.map((prompt) => (
+                prompts.map((prompt) => (
                   <Link
                     key={prompt.id}
                     href={`/prompts/${prompt.id}`}
@@ -220,23 +177,24 @@ export function SearchModal({
               <span className="text-sm font-medium">Discussions</span>
             </div>
             <div className="divide-y divide-border">
-              {filteredDiscussions.length === 0 ? (
+              {!shouldSearch || discussions.length === 0 ? (
                 <p className="px-4 py-6 text-center text-sm text-muted-foreground">
                   No discussions found
                 </p>
               ) : (
-                filteredDiscussions.map((d) => (
+                discussions.map((d) => (
                   <Link
                     key={d.id}
-                    href={`/prompts/1#discussion-${d.id}`}
+                    href={`/prompts/${d.promptId}#discussion-${d.id}`}
                     onClick={onClose}
                     className="block px-4 py-3 transition-colors hover:bg-muted/50"
                   >
                     <p className="truncate text-sm font-medium">{d.title}</p>
                     <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                      {d.body}
+                      {d.matchedAnswerSnippet ?? d.body}
                     </p>
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="truncate max-w-[120px]">{d.promptTitle}</span>
                       <span>@{d.author}</span>
                       <span>{d.votes} votes</span>
                       <span>{d.answerCount} answers</span>

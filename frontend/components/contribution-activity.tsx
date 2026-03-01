@@ -1,33 +1,64 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { FileCode, GitPullRequest } from "lucide-react";
+import { useMemo, useState } from "react";
+import { GitPullRequest, Activity, MessageSquare, FilePlus2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type CommitsByPrompt = { promptId: string; promptTitle: string; count: number };
-type CreatedPrompt = { promptId: string; promptTitle: string; tag?: string; date: string };
-type ReviewedPR = { promptId: string; promptTitle: string; count: number };
+type CreatedPrompt = {
+  promptId: string;
+  promptTitle: string;
+  createdAt: string;
+};
+type PrsByPrompt = { promptId: string; promptTitle: string; count: number };
+type DiscussionQuestion = {
+  id: string;
+  promptId: string;
+  promptTitle: string;
+  title: string;
+  createdAt: string;
+};
+type AnswersByPrompt = { promptId: string; promptTitle: string; count: number };
 
 type ContributionActivityProps = {
   username: string;
-  commitsByPrompt: CommitsByPrompt[];
-  createdPrompts: CreatedPrompt[];
-  reviewedPRs: ReviewedPR[];
+  isOwnProfile?: boolean;
+  profileCreatedAt?: string | null;
+  createdPrompts?: CreatedPrompt[];
+  prsByPrompt?: PrsByPrompt[];
+  discussionQuestions?: DiscussionQuestion[];
+  answersByPrompt?: AnswersByPrompt[];
 };
-
-const YEARS = [2026, 2025, 2024, 2023];
 
 export function ContributionActivity({
   username,
-  commitsByPrompt,
-  createdPrompts,
-  reviewedPRs,
+  isOwnProfile = false,
+  profileCreatedAt = null,
+  createdPrompts = [],
+  prsByPrompt = [],
+  discussionQuestions = [],
+  answersByPrompt = [],
 }: ContributionActivityProps) {
-  const [selectedYear, setSelectedYear] = useState(2026);
-  const totalCommits = commitsByPrompt.reduce((sum, p) => sum + p.count, 0);
-  const maxCommits = Math.max(...commitsByPrompt.map((p) => p.count), 1);
+  const years = useMemo(() => {
+    const nowYear = new Date().getFullYear();
+    const createdYear = profileCreatedAt ? new Date(profileCreatedAt).getFullYear() : nowYear;
+    const startYear =
+      Number.isFinite(createdYear) && createdYear > 1970 && createdYear <= nowYear
+        ? createdYear
+        : nowYear;
+    const result = [];
+    for (let y = nowYear; y >= startYear; y -= 1) result.push(y);
+    return result;
+  }, [profileCreatedAt]);
+  const [selectedYear, setSelectedYear] = useState(years[0] ?? new Date().getFullYear());
+  const totalAnswers = answersByPrompt.reduce((sum, p) => sum + p.count, 0);
+  const maxAnswers = Math.max(...answersByPrompt.map((p) => p.count), 1);
+  const hasActivity =
+    createdPrompts.length > 0 ||
+    prsByPrompt.length > 0 ||
+    discussionQuestions.length > 0 ||
+    answersByPrompt.length > 0;
 
   return (
     <section className="flex gap-8">
@@ -35,15 +66,46 @@ export function ContributionActivity({
         <h2 className="text-lg font-semibold">Contribution activity</h2>
         <p className="mt-1 text-sm text-muted-foreground">February {selectedYear}</p>
 
-        {/* Created X edits in Y prompts */}
-        {commitsByPrompt.length > 0 && (
+        {!hasActivity && (
+          <div className="mt-6 flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
+            <Activity className="size-4 shrink-0" />
+            {isOwnProfile ? "No activity yet" : "No activity"}
+          </div>
+        )}
+
+        {/* Created prompts */}
+        {createdPrompts.length > 0 && (
           <div className="mt-6 border-b border-border pb-6">
             <p className="text-sm text-muted-foreground">
-              Created {totalCommits} edits in {commitsByPrompt.length} prompt
-              {commitsByPrompt.length !== 1 ? "s" : ""}
+              Created {createdPrompts.length} prompt{createdPrompts.length !== 1 ? "s" : ""}
             </p>
             <div className="mt-3 space-y-2 ml-6">
-              {commitsByPrompt.map((item) => (
+              {createdPrompts.map((item) => (
+                <Link
+                  key={item.promptId}
+                  href={`/prompts/${item.promptId}`}
+                  className="flex items-center gap-3 text-sm text-primary hover:underline"
+                >
+                  <FilePlus2 className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">
+                    {username}/{item.promptTitle.replace(/\s+/g, "-").toLowerCase()}
+                  </span>
+                  <span className="shrink-0 text-muted-foreground">{new Date(item.createdAt).toLocaleDateString()}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Answers grouped by prompt */}
+        {answersByPrompt.length > 0 && (
+          <div className="mt-6 border-b border-border pb-6">
+            <p className="text-sm text-muted-foreground">
+              Posted {totalAnswers} answer{totalAnswers !== 1 ? "s" : ""} across {answersByPrompt.length} prompt
+              {answersByPrompt.length !== 1 ? "s" : ""}
+            </p>
+            <div className="mt-3 space-y-2 ml-6">
+              {answersByPrompt.map((item) => (
                 <div
                   key={item.promptId}
                   className="flex items-center gap-4"
@@ -55,13 +117,13 @@ export function ContributionActivity({
                     {username}/{item.promptTitle.replace(/\s+/g, "-").toLowerCase()}
                   </Link>
                   <span className="w-20 shrink-0 text-right text-sm text-muted-foreground">
-                    {item.count} edit{item.count !== 1 ? "s" : ""}
+                    {item.count} answer{item.count !== 1 ? "s" : ""}
                   </span>
                   <div className="flex h-2 w-32 shrink-0 items-center rounded-sm bg-green-500/20">
                     <div
                       className="h-full rounded-sm bg-green-500"
                       style={{
-                        width: `${(item.count / maxCommits) * 100}%`,
+                        width: `${(item.count / maxAnswers) * 100}%`,
                         minWidth: item.count > 0 ? "4px" : "0",
                       }}
                     />
@@ -72,46 +134,41 @@ export function ContributionActivity({
           </div>
         )}
 
-        {/* Created prompts */}
-        {createdPrompts.length > 0 && (
+        {/* Discussion questions */}
+        {discussionQuestions.length > 0 && (
           <div className="mt-4 border-b border-border pb-6">
-            <p className="text-sm font-medium">Created</p>
+            <p className="text-sm font-medium">Discussion questions</p>
             <div className="mt-3 space-y-2 ml-6">
-              {createdPrompts.map((item) => (
+              {discussionQuestions.map((item) => (
                 <Link
-                  key={item.promptId}
-                  href={`/prompts/${item.promptId}`}
+                  key={item.id}
+                  href={`/prompts/${item.promptId}#discussion`}
                   className="flex items-center gap-3 text-sm text-primary hover:underline"
                 >
-                  <FileCode className="size-4 shrink-0 text-muted-foreground" />
+                  <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1 truncate">
-                    {username}/{item.promptTitle.replace(/\s+/g, "-").toLowerCase()}
+                    {item.title}
                   </span>
-                  {item.tag && (
-                    <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-xs">
-                      {item.tag}
-                    </span>
-                  )}
-                  <span className="shrink-0 text-muted-foreground">{item.date}</span>
+                  <span className="shrink-0 text-muted-foreground">{new Date(item.createdAt).toLocaleDateString()}</span>
                 </Link>
               ))}
             </div>
           </div>
         )}
 
-        {/* Reviewed pull requests */}
-        {reviewedPRs.length > 0 && (
+        {/* Pull requests */}
+        {prsByPrompt.length > 0 && (
           <div className="mt-4 border-b border-border pb-6">
             <p className="text-sm text-muted-foreground">
-              Reviewed {reviewedPRs.reduce((s, p) => s + p.count, 0)} pull request
-              {reviewedPRs.reduce((s, p) => s + p.count, 0) !== 1 ? "s" : ""} in{" "}
-              {reviewedPRs.length} prompt{reviewedPRs.length !== 1 ? "s" : ""}
+              Opened {prsByPrompt.reduce((s, p) => s + p.count, 0)} pull request
+              {prsByPrompt.reduce((s, p) => s + p.count, 0) !== 1 ? "s" : ""} in{" "}
+              {prsByPrompt.length} prompt{prsByPrompt.length !== 1 ? "s" : ""}
             </p>
             <div className="mt-3 space-y-2 ml-6">
-              {reviewedPRs.map((item) => (
+              {prsByPrompt.map((item) => (
                 <Link
                   key={item.promptId}
-                  href={`/prompts/${item.promptId}/pull-requests`}
+                  href={`/prompts/${item.promptId}`}
                   className="flex items-center gap-3 text-sm text-primary hover:underline"
                 >
                   <GitPullRequest className="size-4 shrink-0 text-muted-foreground" />
@@ -127,14 +184,16 @@ export function ContributionActivity({
           </div>
         )}
 
-        <Button variant="outline" size="sm" className="mt-8 w-full">
-          Show more activity
-        </Button>
+        {hasActivity && (
+          <Button variant="outline" size="sm" className="mt-8 w-full">
+            Show more activity
+          </Button>
+        )}
       </div>
 
       {/* Year filter sidebar */}
       <aside className="hidden shrink-0 flex-col gap-1 sm:flex">
-        {YEARS.map((year) => (
+        {years.map((year) => (
           <button
             key={year}
             type="button"

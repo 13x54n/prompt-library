@@ -1,8 +1,20 @@
 node_modules
+
+# Environment and secrets - NEVER commit
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-bun.lockb
-package-lock.json
+.env*.local
+!.env.example
+
+# Firebase / Google credentials - NEVER commit
+googleServiceAccount.json
+*-credentials*.json
+*service-account*.json
+*.pem
+
+# Misc
+.DS_Store
+*.log

@@ -6,11 +6,46 @@ import { cn } from "@/lib/utils";
 import type { Prompt } from "@/lib/types";
 
 type PromptCardProps = {
-  prompt: Pick<Prompt, "id" | "title" | "description" | "tags" | "stats" | "lastUpdated" | "username">;
+  prompt: Pick<
+    Prompt,
+    | "id"
+    | "title"
+    | "description"
+    | "tags"
+    | "stats"
+    | "lastUpdated"
+    | "username"
+    | "authorUid"
+    | "parentPromptId"
+    | "parentPromptTitle"
+    | "parentPromptUsername"
+    | "parentPromptAuthorUid"
+  >;
   className?: string;
 };
 
+function buildInteractionSeries(totalInteractions: number, points = 11): number[] {
+  if (totalInteractions <= 0) return Array(points).fill(0);
+  const series = [];
+  for (let i = 0; i < points; i += 1) {
+    const progress = i / (points - 1);
+    const value = Math.round(totalInteractions * progress);
+    series.push(value);
+  }
+  return series;
+}
+
 export function PromptCard({ prompt, className }: PromptCardProps) {
+  const interactions = Math.max(0, prompt.stats.interactions ?? 0);
+  const chartData = buildInteractionSeries(interactions);
+
+  const authorProfileHref = `/profile/${encodeURIComponent(prompt.authorUid ?? prompt.username)}`;
+  const parentAuthorHref = prompt.parentPromptAuthorUid
+    ? `/profile/${encodeURIComponent(prompt.parentPromptAuthorUid)}`
+    : prompt.parentPromptUsername
+      ? `/profile/${encodeURIComponent(prompt.parentPromptUsername)}`
+      : null;
+
   return (
     <article
       className={cn(
@@ -38,9 +73,36 @@ export function PromptCard({ prompt, className }: PromptCardProps) {
         {/* contributor */}
         <div className="mt-2 flex items-center gap-2">
           <p className="text-xs text-muted-foreground">
-            Contributed by <Link href={`/profile/${prompt.username}`} className="text-muted-foreground hover:underline">@{prompt.username}</Link>
+            Contributed by{" "}
+            <Link href={authorProfileHref} className="text-muted-foreground hover:underline">
+              @{prompt.username}
+            </Link>
           </p>
         </div>
+        {prompt.parentPromptId && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Forked from{" "}
+            {prompt.parentPromptTitle ? (
+              <>
+                <Link href={`/prompts/${prompt.parentPromptId}`} className="hover:underline">
+                  {prompt.parentPromptTitle}
+                </Link>
+                {prompt.parentPromptUsername && (
+                  <>
+                    {" "}by{" "}
+                    <Link href={parentAuthorHref ?? "#"} className="hover:underline">
+                      @{prompt.parentPromptUsername}
+                    </Link>
+                  </>
+                )}
+              </>
+            ) : (
+              <Link href={`/prompts/${prompt.parentPromptId}`} className="hover:underline">
+                prompt
+              </Link>
+            )}
+          </p>
+        )}
       </div>
 
       <div className="flex shrink-0 flex-col items-center gap-2 w-fit">
@@ -51,19 +113,7 @@ export function PromptCard({ prompt, className }: PromptCardProps) {
         />
         <div className="w-full min-w-0">
           <ActivityLineChart
-          data={[
-            prompt.stats.views * 0,
-            prompt.stats.views * 0,
-            prompt.stats.views * 0.4,
-            prompt.stats.views * 0.85,
-            prompt.stats.views * 0.5,
-            prompt.stats.views * 0.7,
-            prompt.stats.views * 0.7,
-            prompt.stats.views * 0.7,
-            prompt.stats.views * 0.72,
-            prompt.stats.views * 0,
-            prompt.stats.views,
-          ]}
+            data={chartData}
           />
         </div>
       </div>

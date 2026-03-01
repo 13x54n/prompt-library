@@ -23,19 +23,32 @@ export type BackendUser = {
   website: string | null;
   emailVerified: boolean;
   lastLoginAt?: string;
+  /** "google" | "password" – distinguishes OAuth vs backend auth */
+  provider?: string;
 };
 
-async function recordLoginToBackend(user: User) {
+/** Derive provider from Firebase user (google.com -> "google", password -> "password") */
+function getProviderFromUser(user: User): string {
+  const providerId = user.providerData?.[0]?.providerId ?? "";
+  if (providerId === "password") return "password";
+  return "google";
+}
+
+/** Ensures backend has the user record; call before fetchBackendUser to avoid 404 race. */
+export async function recordLoginToBackend(user: User) {
   try {
+    const token = await user.getIdToken();
     await fetch(`${AUTH_SERVICE_URL}/api/auth/record-login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
-        uid: user.uid,
-        email: user.email ?? "",
         displayName: user.displayName ?? null,
         photoURL: user.photoURL ?? null,
         emailVerified: user.emailVerified ?? false,
+        provider: getProviderFromUser(user),
       }),
     });
   } catch (err) {
@@ -45,6 +58,7 @@ async function recordLoginToBackend(user: User) {
 
 export async function signInWithGoogle() {
   const result = await signInWithPopup(auth, googleProvider);
+  // Auth listener will also call recordLoginToBackend before fetch; this ensures backend has user ASAP
   await recordLoginToBackend(result.user);
   return result;
 }
@@ -66,6 +80,29 @@ export async function fetchBackendUser(idToken: string): Promise<BackendUser | n
   return data?.user ?? null;
 }
 
+/** Check if a username is available (no one has it, or it's the current user's). Requires auth token. */
+export async function checkUsernameAvailability(
+  idToken: string,
+  username: string
+): Promise<{ available: boolean; error?: string }> {
+  const raw = username.trim().toLowerCase();
+  if (!raw) return { available: false, error: "Username is required" };
+  if (!/^[a-z0-9_-]{3,30}$/.test(raw)) {
+    return { available: false, error: "3–30 characters, letters, numbers, underscores, or hyphens." };
+  }
+  try {
+    const res = await fetch(
+      `${AUTH_SERVICE_URL}/api/auth/check-username?username=${encodeURIComponent(raw)}`,
+      { headers: { Authorization: `Bearer ${idToken}` } }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { available: false, error: data?.error ?? "Check failed" };
+    return { available: !!data.available };
+  } catch {
+    return { available: false, error: "Check failed" };
+  }
+}
+
 export type UpdateProfilePayload = {
   displayName?: string | null;
   username?: string | null;
@@ -79,11 +116,9 @@ export type UpdateProfileResult = {
   errorMessage?: string;
 };
 
-/** Optional dev fallback: when backend returns 503 (no Firebase Admin), retry with uid + email in body */
 export async function updateProfile(
   idToken: string,
-  payload: UpdateProfilePayload,
-  fallback?: { uid: string; email: string }
+  payload: UpdateProfilePayload
 ): Promise<UpdateProfileResult> {
   const res = await fetch(`${AUTH_SERVICE_URL}/api/auth/me`, {
     method: "PATCH",
@@ -100,23 +135,6 @@ export async function updateProfile(
   if (res.ok) {
     const data = await res.json();
     return { updated: data?.user ?? null };
-  }
-  // Dev fallback: backend may return 503 when Firebase Admin is not configured
-  if (res.status === 503 && fallback?.uid && fallback?.email) {
-    const retryRes = await fetch(`${AUTH_SERVICE_URL}/api/auth/me`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...payload,
-        uid: fallback.uid,
-        email: fallback.email,
-      }),
-    });
-    if (retryRes.ok) {
-      const data = await retryRes.json();
-      return { updated: data?.user ?? null };
-    }
-    return { updated: null, errorMessage: await getError(retryRes) };
   }
   return { updated: null, errorMessage: await getError(res) };
 }

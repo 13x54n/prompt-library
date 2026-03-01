@@ -2,6 +2,8 @@
 
 Microservices for the Prompt Library.
 
+For full cross-service architecture and integration details, see `INTEGRATION_GUIDE.md` in the repository root.
+
 ## Services
 
 ### auth-service

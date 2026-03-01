@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
-import { updateProfile } from "@/lib/auth";
+import { updateProfile, checkUsernameAvailability } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/user-avatar";
-import { X } from "lucide-react";
+import { X, Check, Loader2 } from "lucide-react";
 
 type EditProfileModalProps = {
   open: boolean;
@@ -25,6 +25,8 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
   const [website, setWebsite] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [usernameError, setUsernameError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !currentUser) return;
@@ -34,7 +36,42 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
     setBio(currentUser.bio ?? "");
     setWebsite(currentUser.website ?? "");
     setError(null);
+    setUsernameStatus("idle");
+    setUsernameError(null);
   }, [open, currentUser]);
+
+  const checkUsername = useCallback(
+    async (value: string) => {
+      const raw = value.trim().toLowerCase();
+      if (!raw || raw.length < 3) {
+        setUsernameStatus("idle");
+        setUsernameError(raw ? "At least 3 characters" : null);
+        return;
+      }
+      if (!/^[a-z0-9_-]{3,30}$/.test(raw)) {
+        setUsernameStatus("taken");
+        setUsernameError("Only letters, numbers, underscores, hyphens");
+        return;
+      }
+      if (!user) return;
+      setUsernameStatus("checking");
+      setUsernameError(null);
+      const { available, error: err } = await checkUsernameAvailability(await user.getIdToken(), raw);
+      setUsernameStatus(available ? "available" : "taken");
+      setUsernameError(err ?? (available ? null : "Username is taken"));
+    },
+    [user]
+  );
+
+  useEffect(() => {
+    if (!open || !username.trim()) {
+      setUsernameStatus("idle");
+      setUsernameError(null);
+      return;
+    }
+    const t = setTimeout(() => checkUsername(username), 400);
+    return () => clearTimeout(t);
+  }, [open, username, checkUsername]);
 
   useEffect(() => {
     if (!open) return;
@@ -49,6 +86,16 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
     e.preventDefault();
     if (!user) return;
     setError(null);
+    if (username.trim().length >= 3) {
+      if (usernameStatus === "checking") {
+        setError("Please wait for username check to complete.");
+        return;
+      }
+      if (usernameStatus === "taken") {
+        setError("Username is not available. Please choose another.");
+        return;
+      }
+    }
     setSaving(true);
     try {
       const token = await user.getIdToken();
@@ -59,12 +106,10 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
         bio: bio.trim() || null,
         website: website.trim() || null,
       };
-      const { updated, errorMessage } = await updateProfile(token, payload, {
-        uid: user.uid,
-        email: user.email ?? "",
-      });
+      const { updated, errorMessage } = await updateProfile(token, payload);
       if (updated) {
         await refetchBackendUser();
+        router.push(`/profile/${encodeURIComponent(updated.uid ?? user.uid)}`);
         router.refresh();
         onClose();
       } else {
@@ -142,18 +187,26 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
 
           <div className="space-y-2">
             <Label htmlFor="modal-username">Username</Label>
-            <Input
-              id="modal-username"
-              value={username}
-              onChange={(e) =>
-                setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))
-              }
-              placeholder="e.g. ming_open_web"
-              minLength={3}
-              maxLength={30}
-            />
+            <div className="relative">
+              <Input
+                id="modal-username"
+                value={username}
+                onChange={(e) =>
+                  setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))
+                }
+                placeholder="e.g. ming_open_web"
+                minLength={3}
+                maxLength={30}
+                className={usernameStatus === "taken" ? "border-destructive" : ""}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                {usernameStatus === "checking" && <Loader2 className="size-4 animate-spin" />}
+                {usernameStatus === "available" && <Check className="size-4 text-green-600" />}
+                {usernameStatus === "taken" && <X className="size-4 text-destructive" />}
+              </span>
+            </div>
             <p className="text-xs text-muted-foreground">
-              3–30 characters, letters, numbers, underscores, or hyphens.
+              {usernameError ?? "3–30 characters, letters, numbers, underscores, or hyphens."}
             </p>
           </div>
 

@@ -46,10 +46,10 @@ export function PullRequestsClient({ promptId }: PullRequestsClientProps) {
   const [openPrId, setOpenPrId] = useState<string | null>(null);
 
   const prFromUrl = searchParams.get("pr");
+  const activePrId = openPrId ?? prFromUrl;
 
   useEffect(() => {
     if (prFromUrl) {
-      setOpenPrId(prFromUrl);
       // Clear the query param from URL without full navigation
       router.replace(`/prompts/${promptId}/pull-requests`, { scroll: false });
     }
@@ -120,10 +120,10 @@ export function PullRequestsClient({ promptId }: PullRequestsClientProps) {
         </div>
       </div>
 
-      {openPrId && (
+      {activePrId && (
         <PullRequestModal
           promptId={promptId}
-          prId={openPrId}
+          prId={activePrId}
           onClose={handleCloseModal}
         />
       )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -12,20 +13,68 @@ import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
 import { useAuth } from "@/components/auth-provider";
 import { signOut } from "@/lib/auth";
+import { fetchNotifications, fetchUnreadNotificationCount, type ApiNotification } from "@/lib/api";
+import { formatRelative } from "@/lib/utils";
 import { LogOut, User, Bell, Plus } from "lucide-react";
 
-function NotificationDropdown() {
+function NotificationDropdown({ user }: { user: { getIdToken: () => Promise<string> } | null }) {
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadNotifications() {
+      if (!user) {
+        if (!cancelled) {
+          setNotifications([]);
+          setUnreadCount(0);
+        }
+        return;
+      }
+      const token = await user.getIdToken();
+      const [listRes, countRes] = await Promise.all([
+        fetchNotifications(token, { limit: 5 }),
+        fetchUnreadNotificationCount(token),
+      ]);
+      if (cancelled) return;
+      setNotifications(listRes.success ? listRes.notifications : []);
+      setUnreadCount(countRes.success ? countRes.unreadCount : 0);
+    }
+
+    loadNotifications();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-8 border border-border" aria-label="Notifications">
+        <Button variant="ghost" size="icon" className="relative size-8 border border-border" aria-label="Notifications">
           <Bell className="size-4" />
+          {unreadCount > 0 && (
+            <span className="absolute -right-1 -top-1 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
-        <div className="px-2 py-3 text-center text-sm text-muted-foreground">
-          No notifications yet
-        </div>
+        {notifications.length === 0 ? (
+          <div className="px-2 py-3 text-center text-sm text-muted-foreground">
+            No notifications yet
+          </div>
+        ) : (
+          notifications.map((n) => (
+            <DropdownMenuItem key={n.id} asChild>
+              <Link href={n.link} className="flex flex-col items-start gap-0.5 py-2">
+                <span className="line-clamp-1 text-sm">{n.title}</span>
+                <span className="line-clamp-1 text-xs text-muted-foreground">{n.body ?? formatRelative(n.createdAt)}</span>
+              </Link>
+            </DropdownMenuItem>
+          ))
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/notifications" className="flex items-center justify-center">
@@ -38,7 +87,7 @@ function NotificationDropdown() {
 }
 
 export function UserMenu() {
-  const { currentUser, loading } = useAuth();
+  const { user, currentUser, loading } = useAuth();
 
   if (loading) {
     return (
@@ -49,7 +98,7 @@ export function UserMenu() {
   if (!currentUser) {
     return (
       <div className="flex items-center gap-2">
-        <NotificationDropdown />
+        <NotificationDropdown user={user} />
         <Button variant="ghost" size="icon" className="size-8 border border-border" asChild>
           <Link href="/prompts/new" aria-label="Create prompt">
             <Plus className="size-4" />
@@ -67,7 +116,7 @@ export function UserMenu() {
 
   return (
     <div className="flex items-center gap-3">
-      <NotificationDropdown />
+      <NotificationDropdown user={user} />
       <Button variant="ghost" size="icon" className="size-8 border border-border" asChild>
         <Link href="/prompts/new" aria-label="Create prompt">
           <Plus className="size-4" />
@@ -81,7 +130,7 @@ export function UserMenu() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem asChild>
-            <Link href={`/profile/${encodeURIComponent(currentUser.profileSlug)}`} className="flex items-center gap-2">
+            <Link href={`/profile/${encodeURIComponent(currentUser.uid)}`} className="flex items-center gap-2">
               <User className="size-4" />
               My profile
             </Link>

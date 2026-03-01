@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from "react";
 import type { User } from "firebase/auth";
-import { subscribeToAuthState, fetchBackendUser, type BackendUser } from "@/lib/auth";
+import { subscribeToAuthState, fetchBackendUser, recordLoginToBackend, type BackendUser } from "@/lib/auth";
+import { fetchProfile } from "@/lib/api";
 
 /** Unified logged-in user. Profile data (photo, name, slug) comes from backend only; Google is used for authentication only. */
 export type CurrentUser = {
@@ -22,9 +23,11 @@ export type CurrentUser = {
   profileSlug: string;
   bio: string | null;
   website: string | null;
+  /** "google" | "password" – distinguishes OAuth vs backend auth */
+  provider: string;
 };
 
-/** Build currentUser: backend is source of truth for profile (photo, name, slug). Firebase supplies only uid/email (auth). */
+/** Build currentUser: backend is source of truth for profile. No Google fallback for photo/name. */
 function toCurrentUser(user: User, backendUser: BackendUser | null): CurrentUser {
   const displayName =
     backendUser?.displayName ?? user.email ?? "User";
@@ -39,6 +42,7 @@ function toCurrentUser(user: User, backendUser: BackendUser | null): CurrentUser
     profileSlug,
     bio: backendUser?.bio ?? null,
     website: backendUser?.website ?? null,
+    provider: backendUser?.provider ?? "google",
   };
 }
 
@@ -68,7 +72,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!firebaseUser) return;
     try {
       const token = await firebaseUser.getIdToken();
-      const backend = await fetchBackendUser(token);
+      let backend = await fetchBackendUser(token);
+      if (!backend) {
+        const profile = await fetchProfile(firebaseUser.uid);
+        if (profile.success && profile.user) {
+          backend = {
+            id: "",
+            uid: profile.user.uid,
+            email: profile.user.email ?? firebaseUser.email ?? "",
+            username: profile.user.username,
+            displayName: profile.user.displayName,
+            photoURL: profile.user.photoURL,
+            bio: profile.user.bio,
+            website: profile.user.website,
+            emailVerified: false,
+            provider: "google",
+          };
+        }
+      }
       setBackendUser(backend);
     } catch {
       setBackendUser(null);
@@ -82,8 +103,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setBackendUser(null);
       } else {
         try {
+          await recordLoginToBackend(firebaseUser);
           const token = await firebaseUser.getIdToken();
-          const backend = await fetchBackendUser(token);
+          let backend = await fetchBackendUser(token);
+          if (!backend) {
+            const profile = await fetchProfile(firebaseUser.uid);
+            if (profile.success && profile.user) {
+              backend = {
+                id: "",
+                uid: profile.user.uid,
+                email: profile.user.email ?? firebaseUser.email ?? "",
+                username: profile.user.username,
+                displayName: profile.user.displayName,
+                photoURL: profile.user.photoURL,
+                bio: profile.user.bio,
+                website: profile.user.website,
+                emailVerified: false,
+                provider: "google",
+              };
+            }
+          }
           setBackendUser(backend);
         } catch {
           setBackendUser(null);

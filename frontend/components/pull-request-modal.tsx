@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   GitPullRequest,
   MessageSquare,
@@ -12,16 +14,24 @@ import {
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
 import { PromptCodeBlock } from "@/components/prompt-library";
-import { MOCK_PRS } from "@/lib/pull-requests";
-import { useEffect } from "react";
+import { useAuth } from "@/components/auth-provider";
+import {
+  fetchPullRequest,
+  addPullRequestComment,
+  mergePullRequest,
+  closePullRequest,
+  type ApiPullRequest,
+} from "@/lib/api";
 
 type PullRequestModalProps = {
   promptId: string;
   prId: string;
+  promptAuthorUid?: string;
   onClose: () => void;
+  onMergedOrClosed?: () => void;
 };
 
-function StatusBadge({ status }: { status: "open" | "closed" | "merged" }) {
+function StatusBadge({ status }: { status: string }) {
   if (status === "merged") {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/20 px-3 py-1 text-sm font-medium text-purple-600 dark:text-purple-400">
@@ -46,8 +56,29 @@ function StatusBadge({ status }: { status: "open" | "closed" | "merged" }) {
   );
 }
 
-export function PullRequestModal({ promptId, prId, onClose }: PullRequestModalProps) {
-  const pr = MOCK_PRS[prId];
+export function PullRequestModal({
+  promptId,
+  prId,
+  promptAuthorUid,
+  onClose,
+  onMergedOrClosed,
+}: PullRequestModalProps) {
+  const router = useRouter();
+  const { user, currentUser } = useAuth();
+  const [pr, setPr] = useState<ApiPullRequest | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [commentText, setCommentText] = useState("");
+  const [postingComment, setPostingComment] = useState(false);
+  const [merging, setMerging] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchPullRequest(promptId, prId).then((result) => {
+      if (result.success) setPr(result.pullRequest);
+      setLoading(false);
+    });
+  }, [promptId, prId]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -61,7 +92,76 @@ export function PullRequestModal({ promptId, prId, onClose }: PullRequestModalPr
     };
   }, [onClose]);
 
-  if (!pr) return null;
+  async function handleComment() {
+    if (!user || !currentUser || !commentText.trim()) return;
+    setActionError(null);
+    setPostingComment(true);
+    try {
+      const token = await user.getIdToken();
+      const authorUsername = currentUser.username ?? currentUser.profileSlug ?? "unknown";
+      const result = await addPullRequestComment(token, promptId, prId, {
+        body: commentText.trim(),
+        authorUsername,
+      });
+      if (result.success) {
+        setCommentText("");
+        const refresh = await fetchPullRequest(promptId, prId);
+        if (refresh.success) setPr(refresh.pullRequest);
+      } else {
+        setActionError(result.error);
+      }
+    } finally {
+      setPostingComment(false);
+    }
+  }
+
+  async function handleMerge() {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    setActionError(null);
+    setMerging(true);
+    try {
+      const token = await user.getIdToken();
+      const result = await mergePullRequest(token, promptId, prId);
+      if (result.success) {
+        setPr(result.pullRequest);
+        onMergedOrClosed?.();
+      } else {
+        setActionError(result.error);
+      }
+    } finally {
+      setMerging(false);
+    }
+  }
+
+  async function handleClose() {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    setActionError(null);
+    setClosing(true);
+    try {
+      const token = await user.getIdToken();
+      const result = await closePullRequest(token, promptId, prId);
+      if (result.success) {
+        setPr(result.pullRequest);
+        onMergedOrClosed?.();
+      } else {
+        setActionError(result.error);
+      }
+    } finally {
+      setClosing(false);
+    }
+  }
+
+  if (loading || !pr) return null;
+
+  const currentUid = currentUser?.uid ?? "";
+  const isOwner = Boolean(currentUid && promptAuthorUid && currentUid === promptAuthorUid);
+  const isPrAuthor = Boolean(currentUid && pr.authorUid && currentUid === pr.authorUid);
 
   return (
     <div
@@ -165,7 +265,7 @@ export function PullRequestModal({ promptId, prId, onClose }: PullRequestModalPr
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 text-sm">
                           <Link
-                            href={`/profile/${comment.author}`}
+                            href={`/profile/${comment.authorUid ?? comment.author}`}
                             className="font-medium hover:underline"
                           >
                             @{comment.author}
@@ -191,10 +291,17 @@ export function PullRequestModal({ promptId, prId, onClose }: PullRequestModalPr
                     <textarea
                       placeholder="Add a comment..."
                       rows={3}
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
                       className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                     />
-                    <Button size="sm" className="mt-2">
-                      Comment
+                    <Button
+                      size="sm"
+                      className="mt-2"
+                      onClick={handleComment}
+                      disabled={postingComment || !commentText.trim()}
+                    >
+                      {postingComment ? "Posting…" : "Comment"}
                     </Button>
                   </div>
                 )}
@@ -203,6 +310,11 @@ export function PullRequestModal({ promptId, prId, onClose }: PullRequestModalPr
 
             {/* Sidebar */}
             <aside className="space-y-4">
+              {actionError && (
+                <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  {actionError}
+                </p>
+              )}
               <div className="rounded-lg border border-border bg-card p-4">
                 <h3 className="mb-3 text-sm font-medium text-muted-foreground">
                   Details
@@ -212,7 +324,7 @@ export function PullRequestModal({ promptId, prId, onClose }: PullRequestModalPr
                     <dt className="text-muted-foreground">Author</dt>
                     <dd>
                       <Link
-                        href={`/profile/${pr.author}`}
+                        href={`/profile/${pr.authorUid ?? pr.author}`}
                         className="font-medium hover:underline"
                       >
                         @{pr.author}
@@ -231,14 +343,29 @@ export function PullRequestModal({ promptId, prId, onClose }: PullRequestModalPr
               </div>
               {pr.status === "open" && (
                 <div className="flex flex-col gap-2">
-                  <Button size="sm" className="w-full gap-1">
-                    <Check className="size-4" />
-                    Merge
-                  </Button>
-                  <Button size="sm" variant="outline" className="w-full gap-1">
+                  {isOwner && (
+                    <Button
+                      size="sm"
+                      className="w-full gap-1"
+                      onClick={handleMerge}
+                      disabled={merging}
+                    >
+                      <Check className="size-4" />
+                      {merging ? "Merging…" : "Merge"}
+                    </Button>
+                  )}
+                  {(isOwner || isPrAuthor) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-1"
+                    onClick={handleClose}
+                    disabled={closing}
+                  >
                     <X className="size-4" />
-                    Close
+                    {closing ? "Closing…" : "Close"}
                   </Button>
+                  )}
                 </div>
               )}
             </aside>

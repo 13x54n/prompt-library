@@ -1,29 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import { GitPullRequest, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { GitPullRequest, ChevronRight, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PullRequestModal } from "@/components/pull-request-modal";
 import { PullRequestsListModal } from "@/components/pull-requests-list-modal";
+import { CreatePullRequestModal } from "@/components/create-pull-request-modal";
 
 type PullRequestSummary = {
   id: string;
   title: string;
   author: string;
+  authorUid?: string | null;
   status: string;
   createdAt: string;
+  discussionCount?: number;
 };
 
 type PullRequestsSidebarProps = {
   promptId: string;
+  promptAuthorUid?: string;
   pullRequests: PullRequestSummary[];
 };
 
 export function PullRequestsSidebar({
   promptId,
+  promptAuthorUid,
   pullRequests,
 }: PullRequestsSidebarProps) {
+  const router = useRouter();
   const [openPrId, setOpenPrId] = useState<string | null>(null);
   const [showAllModal, setShowAllModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  function handleRefresh() {
+    router.refresh();
+  }
 
   return (
     <>
@@ -32,6 +45,15 @@ export function PullRequestsSidebar({
           <GitPullRequest className="size-4" />
           Pull requests
         </h3>
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full justify-start gap-1"
+          onClick={() => setShowCreateModal(true)}
+        >
+          <Plus className="size-4" />
+          New PR
+        </Button>
         <div className="flex flex-col gap-2">
           {pullRequests.map((pr) => (
             <button
@@ -46,11 +68,16 @@ export function PullRequestsSidebar({
               <p className="mt-1 text-xs text-muted-foreground">
                 @{pr.author} · {pr.createdAt}
               </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {pr.discussionCount ?? 0} discussion{(pr.discussionCount ?? 0) === 1 ? "" : "s"}
+              </p>
               <span
                 className={`mt-2 inline-block rounded-full px-2 py-0.5 text-xs ${
                   pr.status === "merged"
                     ? "bg-purple-500/20 text-purple-600 dark:text-purple-400"
-                    : "bg-green-500/20 text-green-600 dark:text-green-400"
+                    : pr.status === "closed"
+                      ? "bg-red-500/20 text-red-600 dark:text-red-400"
+                      : "bg-green-500/20 text-green-600 dark:text-green-400"
                 }`}
               >
                 {pr.status}
@@ -71,8 +98,18 @@ export function PullRequestsSidebar({
       {openPrId && (
         <PullRequestModal
           promptId={promptId}
+          promptAuthorUid={promptAuthorUid}
           prId={openPrId}
           onClose={() => setOpenPrId(null)}
+          onMergedOrClosed={handleRefresh}
+        />
+      )}
+
+      {showCreateModal && (
+        <CreatePullRequestModal
+          promptId={promptId}
+          onClose={() => setShowCreateModal(false)}
+          onCreated={handleRefresh}
         />
       )}
 

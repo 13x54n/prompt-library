@@ -1,0 +1,76 @@
+import { config } from "dotenv";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+config({ path: resolve(dirname(fileURLToPath(import.meta.url)), "..", ".env") });
+import express from "express";
+import cors from "cors";
+import morgan from "morgan";
+import helmet from "helmet";
+import { rateLimit } from "express-rate-limit";
+import { connectMongo } from "./db/mongo.js";
+import notificationsRoutes from "./routes/notifications.js";
+import { consumeDomainEvents } from "./lib/rabbitmq.js";
+import { processDomainEvent } from "./lib/event-processor.js";
+
+const PORT = process.env.PORT ?? 5003;
+const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:3000";
+const isProd = process.env.NODE_ENV === "production";
+const allowedOrigins = CORS_ORIGIN.includes(",")
+  ? CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean)
+  : [CORS_ORIGIN];
+
+const app = express();
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      if (!isProd || allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("CORS origin not allowed"));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+app.use(express.json({ limit: "256kb" }));
+app.use(morgan("dev"));
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
+
+app.use("/api/notifications", notificationsRoutes);
+
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok", service: "notification-service" });
+});
+
+async function handleDomainEvent(event) {
+  await processDomainEvent(event);
+}
+
+async function start() {
+  await connectMongo();
+  consumeDomainEvents(handleDomainEvent).catch((err) => {
+    console.error("[notification-service] Consumer startup failed (API still running):", err.message);
+  });
+  app.listen(PORT, () => {
+    console.log(`[notification-service] Listening on http://localhost:${PORT}`);
+  });
+}
+
+start().catch((err) => {
+  console.error("[notification-service] Failed to start:", err);
+  process.exit(1);
+});

@@ -4,17 +4,8 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SearchModal } from "@/components/search-modal";
-import type { Prompt, TrendingDeveloper } from "@/lib/types";
 
-type SearchBarProps = {
-  users: TrendingDeveloper[];
-  prompts: Pick<
-    Prompt,
-    "id" | "title" | "description" | "tags" | "stats" | "lastUpdated" | "username"
-  >[];
-};
-
-export function SearchBar({ users, prompts }: SearchBarProps) {
+export function SearchBar() {
   const [open, setOpen] = useState(false);
 
   return (
@@ -41,8 +32,6 @@ export function SearchBar({ users, prompts }: SearchBarProps) {
       <SearchModal
         open={open}
         onClose={() => setOpen(false)}
-        users={users}
-        prompts={prompts}
       />
     </>
   );

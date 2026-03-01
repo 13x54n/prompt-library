@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+For full backend/frontend integration architecture and feature flow documentation, see `INTEGRATION_GUIDE.md` in the repository root.
+
 ## Getting Started
 
 First, run the development server:

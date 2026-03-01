@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TrendingUp, Users } from "lucide-react";
-import { PromptCard } from "@/components/prompt-library";
 import { TrendingDeveloperCard } from "@/components/trending-developer-card";
-import { MOCK_PROMPTS, MOCK_TRENDING_DEVS } from "@/lib/mock-data";
+import { ExploreFeedClient } from "@/components/explore-feed-client";
+import { fetchProfile, fetchPrompts, type ApiPrompt } from "@/lib/api";
+import type { Prompt, TrendingDeveloper } from "@/lib/types";
+import { formatRelative } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: { absolute: "Explore | Prompt Library" },
@@ -11,11 +13,84 @@ export const metadata: Metadata = {
     "Browse trending AI prompts and developers. Discover prompts for Next.js, React, TypeScript, and more. Fork, upvote, and contribute to the community.",
 };
 
-const TRENDING_PROMPTS = [...MOCK_PROMPTS].sort(
-  (a, b) => b.stats.upvotes + b.stats.views - (a.stats.upvotes + a.stats.views)
-);
+function toPromptCard(api: ApiPrompt): Pick<
+  Prompt,
+  "id" | "title" | "description" | "tags" | "stats" | "lastUpdated" | "username" | "authorUid" | "parentPromptId"
+> {
+  return {
+    id: api.id,
+    title: api.title,
+    description: api.description ?? "",
+    tags: api.tags ?? [],
+    stats: api.stats ?? { upvotes: 0, forks: 0, views: 0, interactions: 0 },
+    lastUpdated: formatRelative(api.lastUpdated),
+    username: api.username,
+    authorUid: api.authorUid,
+    parentPromptId: api.parentPromptId ?? null,
+  };
+}
 
-export default function ExplorePage() {
+export default async function ExplorePage() {
+  const [newestRes, poolRes] = await Promise.all([
+    fetchPrompts({ sort: "createdAt", limit: 30 }),
+    fetchPrompts({ sort: "upvotes", limit: 100 }),
+  ]);
+
+  const newestPrompts = newestRes.success ? newestRes.prompts.map(toPromptCard) : [];
+  const rankingPool = poolRes.success ? poolRes.prompts : newestRes.success ? newestRes.prompts : [];
+
+  const trendingPrompts = [...rankingPool]
+    .sort((a, b) => {
+      const aScore = (a.stats?.interactions ?? 0) + (a.stats?.upvotes ?? 0);
+      const bScore = (b.stats?.interactions ?? 0) + (b.stats?.upvotes ?? 0);
+      return bScore - aScore;
+    })
+    .slice(0, 10)
+    .map(toPromptCard);
+
+  const devMap = new Map<string, TrendingDeveloper>();
+  for (const p of rankingPool) {
+    const key = p.authorUid ?? p.username?.toLowerCase();
+    if (!key) continue;
+    const existing = devMap.get(key) ?? {
+      uid: p.authorUid,
+      username: p.username,
+      promptCount: 0,
+      totalUpvotes: 0,
+      totalForks: 0,
+      totalViews: 0,
+      totalActivity: 0,
+    };
+    existing.promptCount += 1;
+    existing.totalUpvotes += p.stats?.upvotes ?? 0;
+    existing.totalForks += p.stats?.forks ?? 0;
+    existing.totalViews += p.stats?.views ?? 0;
+    existing.totalActivity = (existing.totalActivity ?? 0) + (p.stats?.interactions ?? 0);
+    devMap.set(key, existing);
+  }
+  const trendingDevelopers = [...devMap.values()]
+    .sort((a, b) => {
+      const aScore = a.totalUpvotes + a.totalForks + (a.totalActivity ?? 0);
+      const bScore = b.totalUpvotes + b.totalForks + (b.totalActivity ?? 0);
+      return bScore - aScore;
+    })
+    .slice(0, 10);
+
+  const trendingDevelopersWithProfile = await Promise.all(
+    trendingDevelopers.map(async (dev) => {
+      const profile = await fetchProfile(dev.uid ?? dev.username);
+      if (!profile.success) return dev;
+      return {
+        ...dev,
+        uid: profile.user.uid ?? dev.uid,
+        username: profile.user.username ?? dev.username,
+        displayName: profile.user.displayName ?? dev.displayName,
+        avatarUrl: profile.user.photoURL ?? dev.avatarUrl,
+        bio: profile.user.bio ?? null,
+      };
+    })
+  );
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="mx-auto flex h-full max-w-7xl flex-1 flex-col gap-8 overflow-hidden px-4 py-8 sm:px-6 lg:grid lg:grid-cols-[280px_1fr_280px] lg:items-start">
@@ -26,21 +101,15 @@ export default function ExplorePage() {
               Trending Developers
             </h2>
             <div className="flex flex-col border rounded-lg bg-card">
-              {MOCK_TRENDING_DEVS.map((dev) => (
+              {trendingDevelopersWithProfile.map((dev) => (
                 <TrendingDeveloperCard key={dev.username} dev={dev} />
               ))}
             </div>
           </aside>
 
           {/* Middle: Main prompts */}
-          <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto lg:order-2">
-            <div className="rounded-lg border border-border bg-card">
-              <div className="divide-y divide-border">
-                {MOCK_PROMPTS.map((prompt) => (
-                  <PromptCard key={prompt.id} prompt={prompt} />
-                ))}
-              </div>
-            </div>
+          <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto lg:order-2 lg:min-w-[min(40vw,640px)]">
+            <ExploreFeedClient initialPrompts={newestPrompts} />
           </main>
 
           {/* Right: Trending Prompts */}
@@ -50,7 +119,7 @@ export default function ExplorePage() {
               Trending Prompts
             </h2>
             <div className="flex flex-col gap-3">
-              {TRENDING_PROMPTS.map((prompt) => (
+              {trendingPrompts.map((prompt) => (
                 <Link
                   key={prompt.id}
                   href={`/prompts/${prompt.id}`}

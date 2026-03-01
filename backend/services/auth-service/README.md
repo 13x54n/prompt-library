@@ -23,7 +23,7 @@ Node.js microservice for authentication and user management. Records login event
 | `PORT` | `5001` | HTTP server port |
 | `CORS_ORIGIN` | `http://localhost:3000` | Allowed origin(s). Comma-separated for multiple (e.g. `http://localhost:3000,https://app.example.com`). |
 | `MONGODB_URI` | `mongodb://localhost:27017/prompt-library` | MongoDB connection string |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | — | Firebase service account JSON string (for `GET /api/auth/me` token verification) |
+| `GOOGLE_APPLICATION_CREDENTIALS` | — | Path to Firebase service account JSON file (e.g. `./googleServiceAccount.json`) or raw JSON string. Required for token verification. |
 
 ## API
 
