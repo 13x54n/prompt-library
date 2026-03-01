@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { ChevronLeft, GitPullRequest } from "lucide-react";
 import { PullRequestModal } from "@/components/pull-request-modal";
 
@@ -41,19 +41,12 @@ type PullRequestsClientProps = {
 };
 
 export function PullRequestsClient({ promptId }: PullRequestsClientProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [openPrId, setOpenPrId] = useState<string | null>(null);
 
   const prFromUrl = searchParams.get("pr");
+  const commentFromUrl = searchParams.get("comment");
   const activePrId = openPrId ?? prFromUrl;
-
-  useEffect(() => {
-    if (prFromUrl) {
-      // Clear the query param from URL without full navigation
-      router.replace(`/prompts/${promptId}/pull-requests`, { scroll: false });
-    }
-  }, [prFromUrl, promptId, router]);
 
   const handleOpenPr = (prId: string) => {
     setOpenPrId(prId);
@@ -124,6 +117,7 @@ export function PullRequestsClient({ promptId }: PullRequestsClientProps) {
         <PullRequestModal
           promptId={promptId}
           prId={activePrId}
+          highlightedCommentId={commentFromUrl ?? undefined}
           onClose={handleCloseModal}
         />
       )}

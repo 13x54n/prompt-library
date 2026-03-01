@@ -20,6 +20,7 @@ function decodeCursor(cursor) {
 }
 
 function formatNotification(n) {
+  const metadata = n.metadata && typeof n.metadata === "object" ? n.metadata : {};
   return {
     id: n._id.toString(),
     type: n.type,
@@ -31,6 +32,10 @@ function formatNotification(n) {
     createdAt: n.createdAt,
     actor: n.actorUsername ?? undefined,
     actorUid: n.actorUid ?? undefined,
+    entityType: n.entityType,
+    entityId: n.entityId,
+    promptId: n.promptId ?? undefined,
+    metadata,
   };
 }
 

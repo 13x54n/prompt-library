@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { BarChart3, Users } from "lucide-react";
 import {
   PromptHeader,
@@ -34,6 +35,7 @@ function toPrompt(api: ApiPrompt): Prompt {
     parameters: api.parameters ?? [],
     variants: api.variants ?? [],
     guide: api.guide ?? undefined,
+    visibility: api.visibility ?? "public",
     isPinned: api.isPinned ?? false,
     parentPromptId: api.parentPromptId ?? null,
   };
@@ -71,11 +73,13 @@ export default async function PromptDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const cookieStore = await cookies();
+  const idToken = cookieStore.get("pl_id_token")?.value;
   const [promptResult, discussionsResult, prsResult, contributorsResult] = await Promise.all([
-    fetchPromptById(id),
-    fetchDiscussions(id),
-    fetchPullRequests(id),
-    fetchContributors(id),
+    fetchPromptById(id, idToken),
+    fetchDiscussions(id, idToken),
+    fetchPullRequests(id, idToken),
+    fetchContributors(id, idToken),
   ]);
 
   if (!promptResult.success || !promptResult.prompt) {
@@ -86,7 +90,7 @@ export default async function PromptDetailPage({
   const parentPromptId = prompt.parentPromptId ?? null;
   const parentPromptResult =
     parentPromptId
-      ? await fetchPromptById(parentPromptId).catch(() => ({ success: false as const, error: "Failed" }))
+      ? await fetchPromptById(parentPromptId, idToken).catch(() => ({ success: false as const, error: "Failed" }))
       : null;
   const parentPrompt =
     parentPromptResult && parentPromptResult.success && parentPromptResult.prompt
@@ -132,7 +136,6 @@ export default async function PromptDetailPage({
           <div className="order-2 shrink-0 self-start lg:order-1">
             <PullRequestsSidebar
               promptId={id}
-              promptAuthorUid={promptResult.prompt.authorUid}
               pullRequests={pullRequests}
             />
           </div>

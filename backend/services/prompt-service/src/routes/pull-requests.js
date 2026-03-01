@@ -3,6 +3,7 @@ import { requireAuth, optionalAuth } from "../middleware/auth.js";
 import { Prompt } from "../models/Prompt.js";
 import { PullRequest } from "../models/PullRequest.js";
 import { publishDomainEvent } from "../lib/event-publisher.js";
+import { ensurePromptAccessOr404 } from "../lib/prompt-visibility.js";
 
 const router = Router({ mergeParams: true });
 
@@ -20,11 +21,44 @@ function formatRelative(date) {
   return d.toLocaleDateString();
 }
 
+function formatPrComment(comment, viewerUid = null) {
+  const voteUids = Array.isArray(comment.voteUids) ? comment.voteUids : [];
+  return {
+    id: comment._id.toString(),
+    author: comment.authorUsername,
+    authorUid: comment.authorUid ?? null,
+    body: comment.body,
+    parentId: comment.parentId ? comment.parentId.toString() : null,
+    depth: comment.depth ?? 0,
+    votes: comment.votes ?? 0,
+    viewerHasVoted: Boolean(viewerUid && voteUids.includes(viewerUid)),
+    createdAt: formatRelative(comment.createdAt),
+    replies: [],
+  };
+}
+
+function buildPrCommentTree(comments, viewerUid = null) {
+  const nodes = comments.map((comment) => formatPrComment(comment, viewerUid));
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const roots = [];
+
+  for (const node of nodes) {
+    if (node.parentId && byId.has(node.parentId)) {
+      byId.get(node.parentId).replies.push(node);
+      continue;
+    }
+    roots.push(node);
+  }
+
+  return { roots, flat: nodes };
+}
+
 function formatPr(doc, { viewerUid = null, promptOwnerUid = null } = {}) {
   const p = doc.toObject ? doc.toObject() : doc;
   const isOwner = !!viewerUid && !!promptOwnerUid && viewerUid === promptOwnerUid;
   const isAuthor = !!viewerUid && viewerUid === p.authorUid;
   const isOpen = (p.status ?? "open") === "open";
+  const { roots, flat } = buildPrCommentTree(p.comments ?? [], viewerUid);
   return {
     id: p._id.toString(),
     title: p.title,
@@ -39,16 +73,11 @@ function formatPr(doc, { viewerUid = null, promptOwnerUid = null } = {}) {
     proposedPrimaryPrompt: p.proposedPrimaryPrompt ?? null,
     proposedGuide: p.proposedGuide ?? null,
     proposedTags: p.proposedTags ?? [],
-    discussionCount: Array.isArray(p.comments) ? p.comments.length : 0,
+    discussionCount: flat.length,
     canMerge: isOwner && isOpen,
     canClose: (isOwner || isAuthor) && isOpen,
-    comments: (p.comments ?? []).map((c) => ({
-      id: c._id.toString(),
-      author: c.authorUsername,
-      authorUid: c.authorUid ?? null,
-      body: c.body,
-      createdAt: formatRelative(c.createdAt),
-    })),
+    comments: flat,
+    commentTree: roots,
   };
 }
 
@@ -59,10 +88,8 @@ function formatPr(doc, { viewerUid = null, promptOwnerUid = null } = {}) {
 router.get("/", optionalAuth, async (req, res) => {
   try {
     const id = req.params.id;
-    const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, req.uid ?? null)) return;
 
     const viewerUid = req.uid ?? null;
     const prs = await PullRequest.find({ promptId: id })
@@ -113,10 +140,8 @@ router.post("/", requireAuth, async (req, res) => {
       proposedTags,
     } = req.body;
 
-    const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, uid)) return;
     if (!title || typeof title !== "string" || !title.trim()) {
       return res.status(400).json({ success: false, error: "title is required" });
     }
@@ -163,10 +188,8 @@ router.get("/:prId", optionalAuth, async (req, res) => {
     const id = req.params.id;
     const prId = req.params.prId;
 
-    const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, req.uid ?? null)) return;
 
     const pr = await PullRequest.findOne({ _id: prId, promptId: id }).lean();
     if (!pr) {
@@ -190,32 +213,25 @@ router.get("/:prId", optionalAuth, async (req, res) => {
  * GET /api/prompts/:id/pull-requests/:prId/discussions
  * List discussion thread for a pull request.
  */
-router.get("/:prId/discussions", async (req, res) => {
+router.get("/:prId/discussions", optionalAuth, async (req, res) => {
   try {
     const id = req.params.id;
     const prId = req.params.prId;
 
-    const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, req.uid ?? null)) return;
     const pr = await PullRequest.findOne({ _id: prId, promptId: id }).lean();
     if (!pr) {
       return res.status(404).json({ success: false, error: "Pull request not found" });
     }
 
-    const discussions = (pr.comments ?? []).map((c) => ({
-      id: c._id.toString(),
-      author: c.authorUsername,
-      authorUid: c.authorUid ?? null,
-      body: c.body,
-      createdAt: formatRelative(c.createdAt),
-    }));
+    const { roots, flat } = buildPrCommentTree(pr.comments ?? [], req.uid ?? null);
 
     res.json({
       success: true,
-      discussions,
-      discussionCount: discussions.length,
+      discussions: roots,
+      comments: flat,
+      discussionCount: flat.length,
     });
   } catch (err) {
     console.error("[prompt-service] GET PR discussions error:", err);
@@ -223,16 +239,15 @@ router.get("/:prId/discussions", async (req, res) => {
   }
 });
 
-async function appendPrDiscussion(req, res) {
+async function appendPrDiscussion(req, res, forcedParentId = undefined) {
   const uid = req.uid;
   const id = req.params.id;
   const prId = req.params.prId;
   const { body, authorUsername } = req.body;
+  const parentId = forcedParentId ?? req.body?.parentId ?? null;
 
-  const prompt = await Prompt.findById(id);
-  if (!prompt) {
-    return res.status(404).json({ success: false, error: "Prompt not found" });
-  }
+  const prompt = await Prompt.findById(id).lean();
+  if (!ensurePromptAccessOr404(res, prompt, uid)) return;
   const pr = await PullRequest.findOne({ _id: prId, promptId: id });
   if (!pr) {
     return res.status(404).json({ success: false, error: "Pull request not found" });
@@ -244,35 +259,44 @@ async function appendPrDiscussion(req, res) {
     return res.status(400).json({ success: false, error: "body is required" });
   }
   const username = (authorUsername ?? "").toString().trim().toLowerCase() || "unknown";
+  let parentDepth = -1;
+  if (parentId) {
+    const parentComment = (pr.comments ?? []).find((comment) => comment._id.toString() === parentId);
+    if (!parentComment) {
+      return res.status(404).json({ success: false, error: "Parent comment not found" });
+    }
+    parentDepth = parentComment.depth ?? 0;
+  }
 
   pr.comments = pr.comments ?? [];
   pr.comments.push({
     authorUid: uid,
     authorUsername: username,
     body: body.trim(),
+    parentId,
+    depth: parentDepth + 1,
   });
   await pr.save();
   await Prompt.findByIdAndUpdate(id, { $inc: { "stats.interactions": 1 } });
-  const recipientUids = [...new Set([prompt.authorUid, pr.authorUid].filter(Boolean))];
+  const comment = pr.comments[pr.comments.length - 1];
+  const recipientUids = [
+    ...new Set([prompt.authorUid, pr.authorUid, ...pr.comments.map((c) => c.authorUid)].filter(Boolean)),
+  ];
   await publishDomainEvent("pr.commented", {
     promptId: id,
     prId: pr._id.toString(),
+    commentId: comment._id.toString(),
+    parentCommentId: comment.parentId ? comment.parentId.toString() : null,
+    commentBodyPreview: comment.body.slice(0, 180),
     prTitle: pr.title,
     recipientUids,
     actorUid: uid,
     actorUsername: username,
   });
 
-  const comment = pr.comments[pr.comments.length - 1];
   return res.status(201).json({
     success: true,
-    comment: {
-      id: comment._id.toString(),
-      author: comment.authorUsername,
-      authorUid: comment.authorUid ?? null,
-      body: comment.body,
-      createdAt: formatRelative(comment.createdAt),
-    },
+    comment: formatPrComment(comment, uid),
     discussionCount: pr.comments.length,
   });
 }
@@ -304,6 +328,118 @@ router.post("/:prId/discussions", requireAuth, async (req, res) => {
 });
 
 /**
+ * POST /api/prompts/:id/pull-requests/:prId/comments/:commentId/replies
+ * Reply to a pull request comment. Requires auth.
+ */
+router.post("/:prId/comments/:commentId/replies", requireAuth, async (req, res) => {
+  try {
+    return await appendPrDiscussion(req, res, req.params.commentId);
+  } catch (err) {
+    console.error("[prompt-service] POST PR comment reply error:", err);
+    res.status(500).json({ success: false, error: err.message ?? "Failed to add reply" });
+  }
+});
+
+/**
+ * POST /api/prompts/:id/pull-requests/:prId/discussions/:commentId/replies
+ * Alias for threaded PR discussion replies. Requires auth.
+ */
+router.post("/:prId/discussions/:commentId/replies", requireAuth, async (req, res) => {
+  try {
+    return await appendPrDiscussion(req, res, req.params.commentId);
+  } catch (err) {
+    console.error("[prompt-service] POST PR discussion reply error:", err);
+    res.status(500).json({ success: false, error: err.message ?? "Failed to add reply" });
+  }
+});
+
+async function togglePrCommentVote(req, res) {
+  const uid = req.uid;
+  const id = req.params.id;
+  const prId = req.params.prId;
+  const commentId = req.params.commentId;
+
+  const prompt = await Prompt.findById(id).lean();
+  if (!ensurePromptAccessOr404(res, prompt, uid)) return;
+  const pr = await PullRequest.findOne({ _id: prId, promptId: id });
+  if (!pr) {
+    return res.status(404).json({ success: false, error: "Pull request not found" });
+  }
+
+  const targetComment = (pr.comments ?? []).find((comment) => comment._id.toString() === commentId);
+  if (!targetComment) {
+    return res.status(404).json({ success: false, error: "Comment not found" });
+  }
+
+  const voteUids = Array.isArray(targetComment.voteUids) ? targetComment.voteUids : [];
+  const hasVoted = voteUids.includes(uid);
+  targetComment.voteUids = hasVoted ? voteUids.filter((value) => value !== uid) : [...voteUids, uid];
+  targetComment.votes = Math.max(0, (targetComment.votes ?? 0) + (hasVoted ? -1 : 1));
+
+  await pr.save();
+  await Prompt.findByIdAndUpdate(id, {
+    $inc: { "stats.interactions": hasVoted ? -1 : 1 },
+  });
+
+  return res.json({
+    success: true,
+    votes: targetComment.votes,
+    hasVoted: !hasVoted,
+  });
+}
+
+/**
+ * POST /api/prompts/:id/pull-requests/:prId/comments/:commentId/vote
+ * Toggle vote on PR comment/reply. Requires auth.
+ */
+router.post("/:prId/comments/:commentId/vote", requireAuth, async (req, res) => {
+  try {
+    return await togglePrCommentVote(req, res);
+  } catch (err) {
+    console.error("[prompt-service] POST PR comment vote error:", err);
+    res.status(500).json({ success: false, error: err.message ?? "Failed to vote" });
+  }
+});
+
+router.post("/:prId/discussions/:commentId/vote", requireAuth, async (req, res) => {
+  try {
+    return await togglePrCommentVote(req, res);
+  } catch (err) {
+    console.error("[prompt-service] POST PR discussion vote error:", err);
+    res.status(500).json({ success: false, error: err.message ?? "Failed to vote" });
+  }
+});
+
+/**
+ * GET /api/prompts/:id/pull-requests/:prId/discussions/thread
+ * Get threaded PR discussion comments.
+ */
+router.get("/:prId/discussions/thread", optionalAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const prId = req.params.prId;
+
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, req.uid ?? null)) return;
+    const pr = await PullRequest.findOne({ _id: prId, promptId: id }).lean();
+    if (!pr) {
+      return res.status(404).json({ success: false, error: "Pull request not found" });
+    }
+
+    const { roots, flat } = buildPrCommentTree(pr.comments ?? [], req.uid ?? null);
+    res.json({
+      success: true,
+      discussions: roots,
+      comments: flat,
+      discussionCount: flat.length,
+    });
+  } catch (err) {
+    console.error("[prompt-service] GET PR threaded discussions error:", err);
+    res.status(500).json({ success: false, error: err.message ?? "Failed to fetch discussions" });
+  }
+});
+
+/**
  * POST /api/prompts/:id/pull-requests/:prId/merge
  * Merge a pull request (prompt owner only). Requires auth.
  */
@@ -313,10 +449,8 @@ router.post("/:prId/merge", requireAuth, async (req, res) => {
     const id = req.params.id;
     const prId = req.params.prId;
 
-    const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, uid)) return;
     if (prompt.authorUid !== uid) {
       return res.status(403).json({ success: false, error: "Only the prompt owner can merge PRs" });
     }
@@ -372,10 +506,8 @@ router.post("/:prId/close", requireAuth, async (req, res) => {
     const id = req.params.id;
     const prId = req.params.prId;
 
-    const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, uid)) return;
 
     const pr = await PullRequest.findOne({ _id: prId, promptId: id });
     if (!pr) {

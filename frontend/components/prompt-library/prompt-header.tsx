@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { ArrowUp, GitFork, Pin, Pencil } from "lucide-react";
+import { ArrowUp, GitFork, Pin, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PromptStats } from "./prompt-stats";
 import { cn } from "@/lib/utils";
@@ -14,13 +14,14 @@ import {
   fetchUpvoteStatus,
   setPromptPinned,
   updatePrompt,
+  deletePrompt,
 } from "@/lib/api";
 import type { Prompt } from "@/lib/types";
 
 type PromptHeaderProps = {
   prompt: Pick<
     Prompt,
-    "title" | "description" | "stats" | "username" | "tags" | "primaryPrompt" | "guide" | "parentPromptId"
+    "title" | "description" | "stats" | "username" | "tags" | "primaryPrompt" | "guide" | "parentPromptId" | "visibility"
   >;
   promptId: string;
   promptAuthorUid?: string;
@@ -56,7 +57,9 @@ export function PromptHeader({
   const [editPrimaryPrompt, setEditPrimaryPrompt] = useState(prompt.primaryPrompt ?? "");
   const [editGuide, setEditGuide] = useState(prompt.guide ?? "");
   const [editTags, setEditTags] = useState((prompt.tags ?? []).join(", "));
+  const [editVisibility, setEditVisibility] = useState<"public" | "unlisted">(prompt.visibility ?? "public");
   const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -139,6 +142,7 @@ export function PromptHeader({
         description: editDescription.trim(),
         primaryPrompt: editPrimaryPrompt.trim(),
         guide: editGuide.trim() ? editGuide.trim() : null,
+        visibility: editVisibility,
         tags: editTags
           .split(",")
           .map((t) => t.trim())
@@ -152,6 +156,28 @@ export function PromptHeader({
       router.refresh();
     } finally {
       setEditLoading(false);
+    }
+  }
+
+  async function handleDeletePrompt() {
+    if (!user || !isOwner) return;
+    const confirmed = window.confirm(
+      "Delete this prompt permanently? This action cannot be undone."
+    );
+    if (!confirmed) return;
+    setDeleteLoading(true);
+    setEditError(null);
+    try {
+      const token = await user.getIdToken();
+      const result = await deletePrompt(token, promptId);
+      if (!result.success || !result.deleted) {
+        setEditError(result.success ? "Failed to delete prompt" : result.error);
+        return;
+      }
+      router.push("/");
+      router.refresh();
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -225,6 +251,18 @@ export function PromptHeader({
             Edit prompt
           </Button>
         )}
+        {isOwner && (
+          <Button
+            size="sm"
+            variant="destructive"
+            className="gap-1"
+            onClick={handleDeletePrompt}
+            disabled={deleteLoading}
+          >
+            <Trash2 className="size-4" />
+            {deleteLoading ? "Deleting..." : "Delete prompt"}
+          </Button>
+        )}
       </div>
       {isEditing && (
         <div className="rounded-lg border border-border bg-card p-4">
@@ -249,6 +287,25 @@ export function PromptHeader({
               placeholder="Tags (comma separated)"
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
+            <div>
+              <p className="mb-2 text-sm font-medium">Visibility</p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={editVisibility === "public" ? "default" : "outline"}
+                  onClick={() => setEditVisibility("public")}
+                >
+                  Public
+                </Button>
+                <Button
+                  size="sm"
+                  variant={editVisibility === "unlisted" ? "default" : "outline"}
+                  onClick={() => setEditVisibility("unlisted")}
+                >
+                  Unlisted
+                </Button>
+              </div>
+            </div>
             <textarea
               rows={6}
               value={editPrimaryPrompt}

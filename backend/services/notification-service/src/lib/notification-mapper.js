@@ -13,6 +13,23 @@ function actorLabel(payload) {
   return payload.actorUsername ? `@${payload.actorUsername}` : "Someone";
 }
 
+function discussionLink(promptId, questionId, answerId = null) {
+  const query = new URLSearchParams();
+  if (questionId) query.set("question", String(questionId));
+  if (answerId) query.set("answer", String(answerId));
+  const suffix = query.toString();
+  return suffix
+    ? `/prompts/${promptId}?${suffix}#discussion`
+    : `/prompts/${promptId}#discussion`;
+}
+
+function prLink(promptId, prId, commentId = null) {
+  const query = new URLSearchParams();
+  query.set("pr", String(prId));
+  if (commentId) query.set("comment", String(commentId));
+  return `/prompts/${promptId}/pull-requests?${query.toString()}`;
+}
+
 function shouldSkipSelf(payload, recipientUid) {
   return Boolean(payload.actorUid && recipientUid && payload.actorUid === recipientUid);
 }
@@ -67,7 +84,7 @@ export function mapEventToNotifications(event) {
         promptId: String(payload.promptId),
         title: "New discussion question on your prompt",
         body: `${actor} asked: ${payload.questionTitle ?? "New question"}`,
-        link: `/prompts/${payload.promptId}#discussion-${payload.questionId}`,
+        link: discussionLink(payload.promptId, payload.questionId),
       });
       break;
     }
@@ -83,7 +100,7 @@ export function mapEventToNotifications(event) {
           promptId: String(payload.promptId),
           title: "Your discussion got a new answer",
           body: `${actor} answered your question`,
-          link: `/prompts/${payload.promptId}#discussion-${payload.questionId}`,
+          link: discussionLink(payload.promptId, payload.questionId, payload.answerId),
         });
       }
       const recipients = Array.isArray(payload.threadParticipantUids)
@@ -103,7 +120,7 @@ export function mapEventToNotifications(event) {
           promptId: String(payload.promptId),
           title: "New reply in a discussion you joined",
           body: `${actor} replied in a discussion thread`,
-          link: `/prompts/${payload.promptId}#discussion-${payload.questionId}`,
+          link: discussionLink(payload.promptId, payload.questionId, payload.answerId),
         });
       }
       break;
@@ -120,7 +137,7 @@ export function mapEventToNotifications(event) {
         promptId: String(payload.promptId),
         title: "New pull request on your prompt",
         body: `${actor} opened PR: ${payload.prTitle ?? "Untitled PR"}`,
-        link: `/prompts/${payload.promptId}/pull-requests?pr=${payload.prId}`,
+        link: prLink(payload.promptId, payload.prId),
       });
       break;
     }
@@ -138,7 +155,7 @@ export function mapEventToNotifications(event) {
           promptId: String(payload.promptId),
           title: "New comment on a pull request",
           body: `${actor} commented on PR: ${payload.prTitle ?? "Untitled PR"}`,
-          link: `/prompts/${payload.promptId}/pull-requests?pr=${payload.prId}`,
+          link: prLink(payload.promptId, payload.prId, payload.commentId),
         });
       }
       break;
@@ -155,7 +172,7 @@ export function mapEventToNotifications(event) {
         promptId: String(payload.promptId),
         title: "Your pull request was merged",
         body: `${actor} merged your PR: ${payload.prTitle ?? "Untitled PR"}`,
-        link: `/prompts/${payload.promptId}/pull-requests?pr=${payload.prId}`,
+        link: prLink(payload.promptId, payload.prId),
       });
       break;
     }

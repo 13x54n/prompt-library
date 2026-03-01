@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
 import {
   GitPullRequest,
   MessageSquare,
@@ -10,25 +11,28 @@ import {
   Check,
   X,
   GitMerge,
+  Heart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
 import { PromptCodeBlock } from "@/components/prompt-library";
+import { MarkdownEditor } from "@/components/prompt-library/markdown-editor";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth-provider";
 import {
   fetchPullRequest,
   addPullRequestComment,
-  mergePullRequest,
-  closePullRequest,
+  addPullRequestCommentReply,
+  votePullRequestComment,
+  type ApiPullRequestComment,
   type ApiPullRequest,
 } from "@/lib/api";
 
 type PullRequestModalProps = {
   promptId: string;
   prId: string;
-  promptAuthorUid?: string;
+  highlightedCommentId?: string;
   onClose: () => void;
-  onMergedOrClosed?: () => void;
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -59,9 +63,8 @@ function StatusBadge({ status }: { status: string }) {
 export function PullRequestModal({
   promptId,
   prId,
-  promptAuthorUid,
+  highlightedCommentId,
   onClose,
-  onMergedOrClosed,
 }: PullRequestModalProps) {
   const router = useRouter();
   const { user, currentUser } = useAuth();
@@ -69,9 +72,6 @@ export function PullRequestModal({
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
   const [postingComment, setPostingComment] = useState(false);
-  const [merging, setMerging] = useState(false);
-  const [closing, setClosing] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPullRequest(promptId, prId).then((result) => {
@@ -94,7 +94,6 @@ export function PullRequestModal({
 
   async function handleComment() {
     if (!user || !currentUser || !commentText.trim()) return;
-    setActionError(null);
     setPostingComment(true);
     try {
       const token = await user.getIdToken();
@@ -107,61 +106,177 @@ export function PullRequestModal({
         setCommentText("");
         const refresh = await fetchPullRequest(promptId, prId);
         if (refresh.success) setPr(refresh.pullRequest);
-      } else {
-        setActionError(result.error);
       }
     } finally {
       setPostingComment(false);
     }
   }
 
-  async function handleMerge() {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    setActionError(null);
-    setMerging(true);
+  async function handleReply(commentId: string, body: string) {
+    if (!user || !currentUser || !body.trim()) return false;
     try {
       const token = await user.getIdToken();
-      const result = await mergePullRequest(token, promptId, prId);
-      if (result.success) {
-        setPr(result.pullRequest);
-        onMergedOrClosed?.();
-      } else {
-        setActionError(result.error);
+      const authorUsername = currentUser.username ?? currentUser.profileSlug ?? "unknown";
+      const result = await addPullRequestCommentReply(token, promptId, prId, commentId, {
+        body: body.trim(),
+        authorUsername,
+      });
+      if (!result.success) {
+        return false;
       }
-    } finally {
-      setMerging(false);
+      const refresh = await fetchPullRequest(promptId, prId);
+      if (refresh.success) setPr(refresh.pullRequest);
+      return true;
+    } catch {
+      return false;
     }
   }
 
-  async function handleClose() {
+  async function handleVoteComment(commentId: string) {
     if (!user) {
       router.push("/login");
       return;
     }
-    setActionError(null);
-    setClosing(true);
-    try {
-      const token = await user.getIdToken();
-      const result = await closePullRequest(token, promptId, prId);
-      if (result.success) {
-        setPr(result.pullRequest);
-        onMergedOrClosed?.();
-      } else {
-        setActionError(result.error);
-      }
-    } finally {
-      setClosing(false);
-    }
+    const token = await user.getIdToken();
+    const result = await votePullRequestComment(token, promptId, prId, commentId);
+    if (!result.success) return;
+    setPr((prev) => {
+      if (!prev) return prev;
+      const updateVotes = (comments: ApiPullRequestComment[]): ApiPullRequestComment[] =>
+        comments.map((comment) => {
+          if (comment.id === commentId) {
+            return {
+              ...comment,
+              votes: result.votes,
+              viewerHasVoted: result.hasVoted,
+              replies: comment.replies ? updateVotes(comment.replies) : comment.replies,
+            };
+          }
+          return {
+            ...comment,
+            replies: comment.replies ? updateVotes(comment.replies) : comment.replies,
+          };
+        });
+
+      return {
+        ...prev,
+        comments: updateVotes(prev.comments),
+        commentTree: prev.commentTree ? updateVotes(prev.commentTree) : prev.commentTree,
+      };
+    });
   }
 
   if (loading || !pr) return null;
 
-  const currentUid = currentUser?.uid ?? "";
-  const isOwner = Boolean(currentUid && promptAuthorUid && currentUid === promptAuthorUid);
-  const isPrAuthor = Boolean(currentUid && pr.authorUid && currentUid === pr.authorUid);
+  const isPrOpen = pr.status === "open";
+  const commentTree = pr.commentTree ?? pr.comments.filter((comment) => !comment.parentId);
+
+  function CommentThreadNode({
+    comment,
+    level = 0,
+  }: {
+    comment: ApiPullRequestComment;
+    level?: number;
+  }) {
+    const [isReplyOpen, setIsReplyOpen] = useState(false);
+    const [replyBody, setReplyBody] = useState("");
+    const [postingReply, setPostingReply] = useState(false);
+    const isHighlighted = highlightedCommentId === comment.id;
+
+    useEffect(() => {
+      if (!isHighlighted) return;
+      const element = document.getElementById(`pr-comment-${comment.id}`);
+      if (!element) return;
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, [comment.id, isHighlighted]);
+
+    async function submitReply() {
+      if (!replyBody.trim()) return;
+      setPostingReply(true);
+      try {
+        const ok = await handleReply(comment.id, replyBody.trim());
+        if (ok) {
+          setReplyBody("");
+          setIsReplyOpen(false);
+        }
+      } finally {
+        setPostingReply(false);
+      }
+    }
+
+    return (
+      <div className={cn(level > 0 && "ml-6 border-l border-border/60 pl-4")}>
+        <div
+          id={`pr-comment-${comment.id}`}
+          className={cn(
+            "flex gap-4 p-4 transition-colors",
+            isHighlighted && "rounded-lg bg-primary/10 ring-1 ring-primary/40"
+          )}
+        >
+          <UserAvatar photoURL={null} name={comment.author} size="sm" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 text-sm">
+              <Link
+                href={`/profile/${comment.authorUid ?? comment.author}`}
+                className="font-medium hover:underline"
+              >
+                @{comment.author}
+              </Link>
+              <span className="text-muted-foreground">commented {comment.createdAt}</span>
+            </div>
+            <div className="prose prose-sm dark:prose-invert mt-2 max-w-none text-muted-foreground">
+              <ReactMarkdown>{comment.body}</ReactMarkdown>
+            </div>
+            {isPrOpen && (
+              <div className="mt-2 flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className={cn(
+                    "gap-1 text-xs",
+                    comment.viewerHasVoted && "text-rose-500 hover:text-rose-500"
+                  )}
+                  onClick={() => void handleVoteComment(comment.id)}
+                >
+                  <Heart className={cn("size-4", comment.viewerHasVoted && "fill-current")} />
+                  {comment.votes ?? 0}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs"
+                  onClick={() => setIsReplyOpen((v) => !v)}
+                >
+                  {isReplyOpen ? "Cancel reply" : "Reply"}
+                </Button>
+              </div>
+            )}
+            {isReplyOpen && (
+              <div className="mt-3">
+                <MarkdownEditor
+                  content={replyBody}
+                  onChange={setReplyBody}
+                  placeholder="Write your reply..."
+                  minRows={4}
+                  submitLabel={postingReply ? "Posting..." : "Post reply"}
+                  onSubmit={submitReply}
+                  onCancel={() => setIsReplyOpen(false)}
+                  disabled={postingReply}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+        {comment.replies && comment.replies.length > 0 && (
+          <div className="space-y-1 pb-3">
+            {comment.replies.map((reply) => (
+              <CommentThreadNode key={reply.id} comment={reply} level={level + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -215,7 +330,7 @@ export function PullRequestModal({
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto p-4">
-          <div className="grid gap-6 lg:grid-cols-[1fr_200px]">
+          <div className="grid">
             <main className="min-w-0 space-y-6">
               {/* Description */}
               <div className="rounded-lg border border-border bg-card">
@@ -248,127 +363,37 @@ export function PullRequestModal({
                 <div className="flex items-center gap-2 border-b border-border px-4 py-3">
                   <MessageSquare className="size-4 text-muted-foreground" />
                   <span className="font-medium">Conversation</span>
-                  {pr.comments.length > 0 && (
+                  {commentTree.length > 0 && (
                     <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
                       {pr.comments.length}
                     </span>
                   )}
                 </div>
                 <div className="divide-y divide-border">
-                  {pr.comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-4 p-4">
-                      <UserAvatar
-                        photoURL={null}
-                        name={comment.author}
-                        size="sm"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Link
-                            href={`/profile/${comment.authorUid ?? comment.author}`}
-                            className="font-medium hover:underline"
-                          >
-                            @{comment.author}
-                          </Link>
-                          <span className="text-muted-foreground">
-                            commented {comment.createdAt}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {comment.body}
-                        </p>
-                      </div>
-                    </div>
+                  {commentTree.map((comment) => (
+                    <CommentThreadNode key={comment.id} comment={comment} />
                   ))}
-                  {pr.comments.length === 0 && (
+                  {commentTree.length === 0 && (
                     <div className="p-8 text-center text-sm text-muted-foreground">
                       No comments yet.
                     </div>
                   )}
                 </div>
-                {pr.status === "open" && (
+                {isPrOpen && (
                   <div className="border-t border-border p-4">
-                    <textarea
+                    <MarkdownEditor
+                      content={commentText}
+                      onChange={setCommentText}
                       placeholder="Add a comment..."
-                      rows={3}
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                      minRows={5}
+                      submitLabel={postingComment ? "Posting..." : "Comment"}
+                      onSubmit={handleComment}
+                      disabled={postingComment}
                     />
-                    <Button
-                      size="sm"
-                      className="mt-2"
-                      onClick={handleComment}
-                      disabled={postingComment || !commentText.trim()}
-                    >
-                      {postingComment ? "Posting…" : "Comment"}
-                    </Button>
                   </div>
                 )}
               </div>
             </main>
-
-            {/* Sidebar */}
-            <aside className="space-y-4">
-              {actionError && (
-                <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                  {actionError}
-                </p>
-              )}
-              <div className="rounded-lg border border-border bg-card p-4">
-                <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-                  Details
-                </h3>
-                <dl className="space-y-3 text-sm">
-                  <div>
-                    <dt className="text-muted-foreground">Author</dt>
-                    <dd>
-                      <Link
-                        href={`/profile/${pr.authorUid ?? pr.author}`}
-                        className="font-medium hover:underline"
-                      >
-                        @{pr.author}
-                      </Link>
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Base</dt>
-                    <dd className="font-mono text-xs">{pr.baseBranch}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Compare</dt>
-                    <dd className="font-mono text-xs">{pr.headBranch}</dd>
-                  </div>
-                </dl>
-              </div>
-              {pr.status === "open" && (
-                <div className="flex flex-col gap-2">
-                  {isOwner && (
-                    <Button
-                      size="sm"
-                      className="w-full gap-1"
-                      onClick={handleMerge}
-                      disabled={merging}
-                    >
-                      <Check className="size-4" />
-                      {merging ? "Merging…" : "Merge"}
-                    </Button>
-                  )}
-                  {(isOwner || isPrAuthor) && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full gap-1"
-                    onClick={handleClose}
-                    disabled={closing}
-                  >
-                    <X className="size-4" />
-                    {closing ? "Closing…" : "Close"}
-                  </Button>
-                  )}
-                </div>
-              )}
-            </aside>
           </div>
         </div>
       </div>

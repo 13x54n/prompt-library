@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, optionalAuth } from "../middleware/auth.js";
 import { Prompt } from "../models/Prompt.js";
 import { DiscussionQuestion } from "../models/DiscussionQuestion.js";
 import { DiscussionAnswer } from "../models/DiscussionAnswer.js";
 import { publishDomainEvent } from "../lib/event-publisher.js";
+import { ensurePromptAccessOr404 } from "../lib/prompt-visibility.js";
 const router = Router({ mergeParams: true });
 
 function formatRelative(date) {
@@ -20,25 +21,59 @@ function formatRelative(date) {
   return d.toLocaleDateString();
 }
 
+function formatAnswerDoc(answer) {
+  return {
+    id: answer._id.toString(),
+    questionId: answer.questionId.toString(),
+    parentAnswerId: answer.parentAnswerId ? answer.parentAnswerId.toString() : null,
+    depth: answer.depth ?? 0,
+    content: answer.content,
+    author: answer.authorUsername,
+    authorUid: answer.authorUid,
+    createdAt: formatRelative(answer.createdAt),
+    votes: answer.votes ?? 0,
+    accepted: answer.accepted ?? false,
+    replies: [],
+  };
+}
+
+function buildAnswerTree(answers) {
+  const byId = new Map();
+  const rootsByQuestion = {};
+
+  for (const answer of answers) {
+    byId.set(answer.id, answer);
+  }
+
+  for (const answer of answers) {
+    if (answer.parentAnswerId && byId.has(answer.parentAnswerId)) {
+      byId.get(answer.parentAnswerId).replies.push(answer);
+      continue;
+    }
+    if (!rootsByQuestion[answer.questionId]) rootsByQuestion[answer.questionId] = [];
+    rootsByQuestion[answer.questionId].push(answer);
+  }
+
+  return rootsByQuestion;
+}
+
 /**
  * GET /api/prompts/:id/discussions
  * List discussion questions for a prompt.
  * Mount at /:id/discussions
  */
-router.get("/", async (req, res) => {
+router.get("/", optionalAuth, async (req, res) => {
   try {
     const id = req.params.id;
-    const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, req.uid ?? null)) return;
 
     const questions = await DiscussionQuestion.find({ promptId: id })
       .sort({ createdAt: -1 })
       .lean();
 
     const answerCounts = await DiscussionAnswer.aggregate([
-      { $match: { questionId: { $in: questions.map((q) => q._id) } } },
+      { $match: { questionId: { $in: questions.map((q) => q._id) }, parentAnswerId: null } },
       { $group: { _id: "$questionId", count: { $sum: 1 } } },
     ]);
     const countMap = Object.fromEntries(answerCounts.map((a) => [a._id.toString(), a.count]));
@@ -60,21 +95,8 @@ router.get("/", async (req, res) => {
       .sort({ createdAt: 1 })
       .lean();
 
-    const answersByQuestion = {};
-    for (const a of answers) {
-      const qid = a.questionId.toString();
-      if (!answersByQuestion[qid]) answersByQuestion[qid] = [];
-      answersByQuestion[qid].push({
-        id: a._id.toString(),
-        questionId: qid,
-        content: a.content,
-        author: a.authorUsername,
-        authorUid: a.authorUid,
-        createdAt: formatRelative(a.createdAt),
-        votes: a.votes ?? 0,
-        accepted: a.accepted ?? false,
-      });
-    }
+    const normalizedAnswers = answers.map(formatAnswerDoc);
+    const answersByQuestion = buildAnswerTree(normalizedAnswers);
 
     res.json({
       success: true,
@@ -97,10 +119,8 @@ router.post("/", requireAuth, async (req, res) => {
     const id = req.params.id;
     const { title, body, authorUsername } = req.body;
 
-    const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, uid)) return;
     if (!title || typeof title !== "string" || !title.trim()) {
       return res.status(400).json({ success: false, error: "title is required" });
     }
@@ -149,70 +169,143 @@ router.post("/", requireAuth, async (req, res) => {
  * POST /api/prompts/:id/discussions/:qId/answers
  * Add an answer to a question. Requires auth.
  */
+async function createAnswer(req, res, forcedParentAnswerId = undefined) {
+  const uid = req.uid;
+  const id = req.params.id;
+  const qId = req.params.qId;
+  const { content, authorUsername } = req.body;
+  const parentAnswerId = forcedParentAnswerId ?? req.body?.parentAnswerId ?? null;
+
+  const prompt = await Prompt.findById(id).lean();
+  if (!ensurePromptAccessOr404(res, prompt, uid)) return;
+  const question = await DiscussionQuestion.findById(qId);
+  if (!question || question.promptId.toString() !== id) {
+    return res.status(404).json({ success: false, error: "Question not found" });
+  }
+  if (!content || typeof content !== "string" || !content.trim()) {
+    return res.status(400).json({ success: false, error: "content is required" });
+  }
+  const username = (authorUsername ?? "").toString().trim().toLowerCase() || "unknown";
+
+  let parentAnswer = null;
+  let depth = 0;
+  if (parentAnswerId) {
+    parentAnswer = await DiscussionAnswer.findOne({ _id: parentAnswerId, questionId: qId }).lean();
+    if (!parentAnswer) {
+      return res.status(404).json({ success: false, error: "Parent answer not found" });
+    }
+    depth = (parentAnswer.depth ?? 0) + 1;
+  }
+
+  const previousAnswers = await DiscussionAnswer.find({ questionId: qId })
+    .select("authorUid")
+    .lean();
+
+  const answer = await DiscussionAnswer.create({
+    questionId: qId,
+    parentAnswerId: parentAnswer?._id ?? null,
+    depth,
+    content: content.trim(),
+    authorUid: uid,
+    authorUsername: username,
+  });
+  await Prompt.findByIdAndUpdate(id, { $inc: { "stats.interactions": 1 } });
+  const threadParticipantUids = [
+    ...new Set(
+      [
+        question.authorUid,
+        ...previousAnswers.map((a) => a.authorUid).filter(Boolean),
+      ].filter(Boolean)
+    ),
+  ];
+  await publishDomainEvent("discussion.answer.created", {
+    promptId: id,
+    questionId: qId,
+    answerId: answer._id.toString(),
+    parentAnswerId: parentAnswer?._id?.toString() ?? null,
+    answerContentPreview: answer.content.slice(0, 180),
+    questionAuthorUid: question.authorUid,
+    threadParticipantUids,
+    actorUid: uid,
+    actorUsername: username,
+  });
+
+  return res.status(201).json({
+    success: true,
+    answer: {
+      id: answer._id.toString(),
+      questionId: qId,
+      parentAnswerId: answer.parentAnswerId ? answer.parentAnswerId.toString() : null,
+      depth: answer.depth ?? 0,
+      content: answer.content,
+      author: answer.authorUsername,
+      authorUid: answer.authorUid,
+      createdAt: formatRelative(answer.createdAt),
+      votes: 0,
+      accepted: false,
+      replies: [],
+    },
+  });
+}
+
 router.post("/:qId/answers", requireAuth, async (req, res) => {
   try {
-    const uid = req.uid;
-    const id = req.params.id;
-    const qId = req.params.qId;
-    const { content, authorUsername } = req.body;
-
-    const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
-    const question = await DiscussionQuestion.findById(qId);
-    if (!question || question.promptId.toString() !== id) {
-      return res.status(404).json({ success: false, error: "Question not found" });
-    }
-    if (!content || typeof content !== "string" || !content.trim()) {
-      return res.status(400).json({ success: false, error: "content is required" });
-    }
-    const username = (authorUsername ?? "").toString().trim().toLowerCase() || "unknown";
-    const previousAnswers = await DiscussionAnswer.find({ questionId: qId })
-      .select("authorUid")
-      .lean();
-
-    const answer = await DiscussionAnswer.create({
-      questionId: qId,
-      content: content.trim(),
-      authorUid: uid,
-      authorUsername: username,
-    });
-    await Prompt.findByIdAndUpdate(id, { $inc: { "stats.interactions": 1 } });
-    const threadParticipantUids = [
-      ...new Set(
-        [
-          question.authorUid,
-          ...previousAnswers.map((a) => a.authorUid).filter(Boolean),
-        ].filter(Boolean)
-      ),
-    ];
-    await publishDomainEvent("discussion.answer.created", {
-      promptId: id,
-      questionId: qId,
-      answerId: answer._id.toString(),
-      questionAuthorUid: question.authorUid,
-      threadParticipantUids,
-      actorUid: uid,
-      actorUsername: username,
-    });
-
-    res.status(201).json({
-      success: true,
-      answer: {
-        id: answer._id.toString(),
-        questionId: qId,
-        content: answer.content,
-        author: answer.authorUsername,
-        authorUid: answer.authorUid,
-        createdAt: formatRelative(answer.createdAt),
-        votes: 0,
-        accepted: false,
-      },
-    });
+    return await createAnswer(req, res);
   } catch (err) {
     console.error("[prompt-service] POST answer error:", err);
     res.status(500).json({ success: false, error: err.message ?? "Failed to post answer" });
+  }
+});
+
+/**
+ * POST /api/prompts/:id/discussions/:qId/answers/:aId/replies
+ * Reply to an answer/reply. Requires auth.
+ */
+router.post("/:qId/answers/:aId/replies", requireAuth, async (req, res) => {
+  try {
+    return await createAnswer(req, res, req.params.aId);
+  } catch (err) {
+    console.error("[prompt-service] POST answer reply error:", err);
+    res.status(500).json({ success: false, error: err.message ?? "Failed to post reply" });
+  }
+});
+
+/**
+ * GET /api/prompts/:id/discussions/:qId/thread
+ * Get the full threaded answers for one question.
+ */
+router.get("/:qId/thread", optionalAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const qId = req.params.qId;
+
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, req.uid ?? null)) return;
+    const question = await DiscussionQuestion.findOne({ _id: qId, promptId: id }).lean();
+    if (!question) {
+      return res.status(404).json({ success: false, error: "Question not found" });
+    }
+
+    const answers = await DiscussionAnswer.find({ questionId: qId }).sort({ createdAt: 1 }).lean();
+    const threadedAnswers = buildAnswerTree(answers.map(formatAnswerDoc))[qId] ?? [];
+
+    res.json({
+      success: true,
+      question: {
+        id: question._id.toString(),
+        title: question.title,
+        body: question.body,
+        author: question.authorUsername,
+        authorUid: question.authorUid,
+        createdAt: formatRelative(question.createdAt),
+        votes: question.votes ?? 0,
+        acceptedAnswerId: question.acceptedAnswerId?.toString(),
+      },
+      answers: threadedAnswers,
+    });
+  } catch (err) {
+    console.error("[prompt-service] GET discussion thread error:", err);
+    res.status(500).json({ success: false, error: err.message ?? "Failed to fetch thread" });
   }
 });
 
@@ -228,9 +321,7 @@ router.post("/:qId/answers/:aId/accept", requireAuth, async (req, res) => {
     const aId = req.params.aId;
 
     const prompt = await Prompt.findById(id).lean();
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    if (!ensurePromptAccessOr404(res, prompt, uid)) return;
     if (prompt.authorUid !== uid) {
       return res.status(403).json({ success: false, error: "Only the prompt owner can accept answers" });
     }
@@ -243,8 +334,11 @@ router.post("/:qId/answers/:aId/accept", requireAuth, async (req, res) => {
     if (!answer || answer.questionId.toString() !== qId) {
       return res.status(404).json({ success: false, error: "Answer not found" });
     }
+    if (answer.parentAnswerId) {
+      return res.status(400).json({ success: false, error: "Only top-level answers can be accepted" });
+    }
 
-    await DiscussionAnswer.updateMany({ questionId: qId }, { $set: { accepted: false } });
+    await DiscussionAnswer.updateMany({ questionId: qId, parentAnswerId: null }, { $set: { accepted: false } });
     await DiscussionAnswer.findByIdAndUpdate(aId, { $set: { accepted: true } });
     await DiscussionQuestion.findByIdAndUpdate(qId, { $set: { acceptedAnswerId: aId } });
 
@@ -265,10 +359,8 @@ router.post("/:qId/vote", requireAuth, async (req, res) => {
     const id = req.params.id;
     const qId = req.params.qId;
 
-    const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, uid)) return;
     const question = await DiscussionQuestion.findOne({ _id: qId, promptId: id });
     if (!question) {
       return res.status(404).json({ success: false, error: "Question not found" });
@@ -310,10 +402,8 @@ router.post("/:qId/answers/:aId/vote", requireAuth, async (req, res) => {
     const qId = req.params.qId;
     const aId = req.params.aId;
 
-    const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, uid)) return;
     const question = await DiscussionQuestion.findOne({ _id: qId, promptId: id });
     if (!question) {
       return res.status(404).json({ success: false, error: "Question not found" });

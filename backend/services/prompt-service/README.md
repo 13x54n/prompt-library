@@ -21,6 +21,16 @@ Records and serves prompt data for the Prompt Library. Manages user-created prom
    npm run dev
    ```
 
+## Data backfill (threaded discussions)
+
+After deploying threaded discussion/comment schema changes, run:
+
+```bash
+npm run backfill:threaded-discussions
+```
+
+This normalizes legacy records by setting missing `parentAnswerId`/`depth` on discussion answers and `parentId`/`depth` on pull-request comments.
+
 ## API
 
 | Method | Path | Auth | Description |

@@ -261,7 +261,31 @@ Each service logs request traffic (`morgan`) and startup/runtime failures to con
 - Basic rate limiting is enabled in each service.
 - Notification writes are server-side only and recipient-filtered at query/update time.
 
-## 14) Current Limitations / TODO Candidates
+## 14) Recent Behavior Updates
+
+### 14.1 Unlisted prompt visibility (owner-safe private behavior)
+
+- `visibility: "unlisted"` prompts are hidden from non-owners across listing and profile/activity queries.
+- Owners can still access their own unlisted prompts from direct prompt routes and profile views.
+- Frontend server-rendered prompt/profile pages forward auth context so owner-only visibility checks work correctly during SSR.
+- Prompt owners can change visibility in the prompt edit flow (`public <-> unlisted`).
+- Prompt owners can delete prompts regardless of visibility (`public` or `unlisted`), matching repository-style ownership behavior.
+
+### 14.2 Discussion vote affordance
+
+- Discussion voting is available per question, answer, and reply.
+- UI now uses explicit text actions (`Upvote (...)`) adjacent to discussion actions (such as `Reply`) instead of icon-only affordance, to reduce ambiguity.
+
+### 14.3 Notification unread count sync
+
+- Bell badge unread count now updates instantly without page refresh when notifications are:
+  - opened/marked read
+  - marked all read
+  - archived individually
+  - archived in bulk
+- Implemented via lightweight client event sync between notifications center and header bell dropdown.
+
+## 15) Current Limitations / TODO Candidates
 
 - No centralized API gateway/BFF layer (frontend calls services directly).
 - Event schemas are implicit in code, not versioned externally.

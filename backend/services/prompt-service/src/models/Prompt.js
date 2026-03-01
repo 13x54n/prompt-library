@@ -29,6 +29,7 @@ const promptSchema = new mongoose.Schema(
     tags: [{ type: String }],
     primaryPrompt: { type: String, required: true },
     guide: { type: String, default: null },
+    visibility: { type: String, enum: ["public", "unlisted"], default: "public", index: true },
     parameters: [parameterSchema],
     variants: [variantSchema],
     stats: {

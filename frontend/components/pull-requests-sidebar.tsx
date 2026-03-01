@@ -20,13 +20,11 @@ type PullRequestSummary = {
 
 type PullRequestsSidebarProps = {
   promptId: string;
-  promptAuthorUid?: string;
   pullRequests: PullRequestSummary[];
 };
 
 export function PullRequestsSidebar({
   promptId,
-  promptAuthorUid,
   pullRequests,
 }: PullRequestsSidebarProps) {
   const router = useRouter();
@@ -98,10 +96,8 @@ export function PullRequestsSidebar({
       {openPrId && (
         <PullRequestModal
           promptId={promptId}
-          promptAuthorUid={promptAuthorUid}
           prId={openPrId}
           onClose={() => setOpenPrId(null)}
-          onMergedOrClosed={handleRefresh}
         />
       )}
 

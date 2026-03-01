@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { cookies } from "next/headers";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { ProfileCard } from "@/components/profile-card";
 import { notFound } from "next/navigation";
@@ -85,6 +86,8 @@ export default async function ProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
+  const cookieStore = await cookies();
+  const idToken = cookieStore.get("pl_id_token")?.value;
   const profileResult = await fetchProfile(username);
   if (!profileResult.success) {
     notFound();
@@ -93,11 +96,11 @@ export default async function ProfilePage({
   const profileUser = profileResult.user;
   const handle = profileUser.username ?? profileUser.displayName ?? profileUser.uid;
   const [promptsResult, activityResult] = await Promise.all([
-    fetchPromptsByAuthorUid(profileUser.uid).catch(() => ({
+    fetchPromptsByAuthorUid(profileUser.uid, idToken).catch(() => ({
       success: false as const,
       error: "Failed",
     })),
-    fetchUserContributionActivityByUid(profileUser.uid).catch(() => ({
+    fetchUserContributionActivityByUid(profileUser.uid, idToken).catch(() => ({
       success: false as const,
       error: "Failed",
     })),
@@ -111,7 +114,7 @@ export default async function ProfilePage({
     )];
     const parentResults = await Promise.all(
       parentIds.map(async (parentId) => {
-        const result = await fetchPromptById(parentId).catch(() => ({ success: false as const, error: "Failed" }));
+        const result = await fetchPromptById(parentId, idToken).catch(() => ({ success: false as const, error: "Failed" }));
         return { parentId, result };
       })
     );

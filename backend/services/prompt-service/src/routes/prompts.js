@@ -3,6 +3,7 @@ import { Prompt } from "../models/Prompt.js";
 import { Upvote } from "../models/Upvote.js";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
 import { publishDomainEvent } from "../lib/event-publisher.js";
+import { ensurePromptAccessOr404 } from "../lib/prompt-visibility.js";
 import discussionsRoutes from "./discussions.js";
 import pullRequestsRoutes from "./pull-requests.js";
 
@@ -31,21 +32,29 @@ function formatPrompt(doc) {
     parameters: p.parameters ?? [],
     variants: p.variants ?? [],
     guide: p.guide ?? null,
+    visibility: p.visibility ?? "public",
     isPinned: p.isPinned ?? false,
     parentPromptId: p.parentPromptId ? p.parentPromptId.toString() : null,
     authorUid: p.authorUid,
   };
 }
 
+function visibilityFilterFor(uid = null) {
+  const publicFilter = [{ visibility: "public" }, { visibility: { $exists: false } }];
+  if (!uid) return { $or: publicFilter };
+  return { $or: [...publicFilter, { authorUid: uid }] };
+}
+
 /**
  * GET /api/prompts
  * List prompts with optional filters: author, tags, search, limit, offset, sort
  */
-router.get("/", async (req, res) => {
+router.get("/", optionalAuth, async (req, res) => {
   try {
     const { author, authorUids, tags, q, limit = 20, offset = 0, sort = "createdAt" } = req.query;
+    const viewerUid = req.uid ?? null;
 
-    const filter = {};
+    const andClauses = [visibilityFilterFor(viewerUid)];
 
     if (authorUids) {
       const uids = String(authorUids)
@@ -53,33 +62,35 @@ router.get("/", async (req, res) => {
         .map((u) => u.trim())
         .filter(Boolean);
       if (uids.length > 0) {
-        filter.authorUid = { $in: [...new Set(uids)] };
+        andClauses.push({ authorUid: { $in: [...new Set(uids)] } });
       }
     }
 
     if (author) {
-      filter.$or = [
-        { authorUsername: author.toLowerCase() },
-        { authorUid: author },
-      ];
+      andClauses.push({
+        $or: [{ authorUsername: author.toLowerCase() }, { authorUid: author }],
+      });
     }
 
     if (tags) {
       const tagList = Array.isArray(tags) ? tags : tags.split(",").map((t) => t.trim());
       if (tagList.length > 0) {
-        filter.tags = { $in: tagList };
+        andClauses.push({ tags: { $in: tagList } });
       }
     }
 
     if (q && String(q).trim()) {
       const search = String(q).trim();
       const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      filter.$or = [
-        { title: { $regex: escaped, $options: "i" } },
-        { description: { $regex: escaped, $options: "i" } },
-        { tags: { $regex: escaped, $options: "i" } },
-      ];
+      andClauses.push({
+        $or: [
+          { title: { $regex: escaped, $options: "i" } },
+          { description: { $regex: escaped, $options: "i" } },
+          { tags: { $regex: escaped, $options: "i" } },
+        ],
+      });
     }
+    const filter = andClauses.length === 1 ? andClauses[0] : { $and: andClauses };
 
     const sortField = { createdAt: -1 };
     if (sort === "upvotes") sortField["stats.upvotes"] = -1;
@@ -109,14 +120,18 @@ router.get("/", async (req, res) => {
  * GET /api/prompts/by-author/:username
  * List prompts by author username.
  */
-router.get("/by-author/:username", async (req, res) => {
+router.get("/by-author/:username", optionalAuth, async (req, res) => {
   try {
     const username = (req.params.username ?? "").trim().toLowerCase();
+    const viewerUid = req.uid ?? null;
     if (!username) {
       return res.status(400).json({ success: false, error: "username is required" });
     }
 
-    const prompts = await Prompt.find({ authorUsername: username })
+    const prompts = await Prompt.find({
+      authorUsername: username,
+      ...visibilityFilterFor(viewerUid),
+    })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -134,14 +149,18 @@ router.get("/by-author/:username", async (req, res) => {
  * GET /api/prompts/by-author-uid/:uid
  * List prompts by author uid (canonical identity key).
  */
-router.get("/by-author-uid/:uid", async (req, res) => {
+router.get("/by-author-uid/:uid", optionalAuth, async (req, res) => {
   try {
     const uid = (req.params.uid ?? "").trim();
+    const viewerUid = req.uid ?? null;
     if (!uid) {
       return res.status(400).json({ success: false, error: "uid is required" });
     }
 
-    const prompts = await Prompt.find({ authorUid: uid })
+    const prompts = await Prompt.find({
+      authorUid: uid,
+      ...visibilityFilterFor(viewerUid),
+    })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -163,9 +182,10 @@ router.get("/by-author-uid/:uid", async (req, res) => {
  * - discussion questions authored (timeline)
  * - discussion answers authored (grouped by prompt)
  */
-router.get("/activity/:username", async (req, res) => {
+router.get("/activity/:username", optionalAuth, async (req, res) => {
   try {
     const username = (req.params.username ?? "").trim().toLowerCase();
+    const viewerUid = req.uid ?? null;
     if (!username) {
       return res.status(400).json({ success: false, error: "username is required" });
     }
@@ -175,7 +195,7 @@ router.get("/activity/:username", async (req, res) => {
     const { PullRequest } = await import("../models/PullRequest.js");
 
     const [createdPromptsRaw, questions, answers, prs] = await Promise.all([
-      Prompt.find({ authorUsername: username })
+      Prompt.find({ authorUsername: username, ...visibilityFilterFor(viewerUid) })
         .select("_id title createdAt")
         .sort({ createdAt: -1 })
         .lean(),
@@ -208,14 +228,18 @@ router.get("/activity/:username", async (req, res) => {
     }
 
     const prompts = promptIds.size
-      ? await Prompt.find({ _id: { $in: [...promptIds] } }).select("_id title").lean()
+      ? await Prompt.find({
+          _id: { $in: [...promptIds] },
+          ...visibilityFilterFor(viewerUid),
+        }).select("_id title").lean()
       : [];
     const promptTitleById = new Map(prompts.map((p) => [p._id.toString(), p.title]));
+    const visiblePromptIdSet = new Set(prompts.map((p) => p._id.toString()));
 
     const prsByPromptMap = {};
     for (const pr of prs) {
       const pid = pr.promptId?.toString();
-      if (!pid) continue;
+      if (!pid || !visiblePromptIdSet.has(pid)) continue;
       prsByPromptMap[pid] = (prsByPromptMap[pid] ?? 0) + 1;
     }
     const prsByPrompt = Object.entries(prsByPromptMap).map(([promptId, count]) => ({
@@ -227,7 +251,7 @@ router.get("/activity/:username", async (req, res) => {
     const answersByPromptMap = {};
     for (const answer of answers) {
       const pid = answerQuestionToPrompt.get(answer.questionId?.toString());
-      if (!pid) continue;
+      if (!pid || !visiblePromptIdSet.has(pid)) continue;
       answersByPromptMap[pid] = (answersByPromptMap[pid] ?? 0) + 1;
     }
     const answersByPrompt = Object.entries(answersByPromptMap).map(([promptId, count]) => ({
@@ -238,6 +262,7 @@ router.get("/activity/:username", async (req, res) => {
 
     const discussionQuestions = questions.map((q) => {
       const promptId = q.promptId?.toString() ?? "";
+      if (!visiblePromptIdSet.has(promptId)) return null;
       return {
         id: q._id.toString(),
         promptId,
@@ -245,7 +270,7 @@ router.get("/activity/:username", async (req, res) => {
         title: q.title,
         createdAt: q.createdAt,
       };
-    });
+    }).filter(Boolean);
 
     const createdPrompts = createdPromptsRaw.map((p) => ({
       promptId: p._id.toString(),
@@ -272,9 +297,10 @@ router.get("/activity/:username", async (req, res) => {
  * GET /api/prompts/activity/by-uid/:uid
  * Contribution activity keyed by canonical uid.
  */
-router.get("/activity/by-uid/:uid", async (req, res) => {
+router.get("/activity/by-uid/:uid", optionalAuth, async (req, res) => {
   try {
     const uid = (req.params.uid ?? "").trim();
+    const viewerUid = req.uid ?? null;
     if (!uid) {
       return res.status(400).json({ success: false, error: "uid is required" });
     }
@@ -284,7 +310,7 @@ router.get("/activity/by-uid/:uid", async (req, res) => {
     const { PullRequest } = await import("../models/PullRequest.js");
 
     const [createdPromptsRaw, questions, answers, prs] = await Promise.all([
-      Prompt.find({ authorUid: uid })
+      Prompt.find({ authorUid: uid, ...visibilityFilterFor(viewerUid) })
         .select("_id title createdAt")
         .sort({ createdAt: -1 })
         .lean(),
@@ -317,14 +343,18 @@ router.get("/activity/by-uid/:uid", async (req, res) => {
     }
 
     const prompts = promptIds.size
-      ? await Prompt.find({ _id: { $in: [...promptIds] } }).select("_id title").lean()
+      ? await Prompt.find({
+          _id: { $in: [...promptIds] },
+          ...visibilityFilterFor(viewerUid),
+        }).select("_id title").lean()
       : [];
     const promptTitleById = new Map(prompts.map((p) => [p._id.toString(), p.title]));
+    const visiblePromptIdSet = new Set(prompts.map((p) => p._id.toString()));
 
     const prsByPromptMap = {};
     for (const pr of prs) {
       const pid = pr.promptId?.toString();
-      if (!pid) continue;
+      if (!pid || !visiblePromptIdSet.has(pid)) continue;
       prsByPromptMap[pid] = (prsByPromptMap[pid] ?? 0) + 1;
     }
     const prsByPrompt = Object.entries(prsByPromptMap).map(([promptId, count]) => ({
@@ -336,7 +366,7 @@ router.get("/activity/by-uid/:uid", async (req, res) => {
     const answersByPromptMap = {};
     for (const answer of answers) {
       const pid = answerQuestionToPrompt.get(answer.questionId?.toString());
-      if (!pid) continue;
+      if (!pid || !visiblePromptIdSet.has(pid)) continue;
       answersByPromptMap[pid] = (answersByPromptMap[pid] ?? 0) + 1;
     }
     const answersByPrompt = Object.entries(answersByPromptMap).map(([promptId, count]) => ({
@@ -347,6 +377,7 @@ router.get("/activity/by-uid/:uid", async (req, res) => {
 
     const discussionQuestions = questions.map((q) => {
       const promptId = q.promptId?.toString() ?? "";
+      if (!visiblePromptIdSet.has(promptId)) return null;
       return {
         id: q._id.toString(),
         promptId,
@@ -354,7 +385,7 @@ router.get("/activity/by-uid/:uid", async (req, res) => {
         title: q.title,
         createdAt: q.createdAt,
       };
-    });
+    }).filter(Boolean);
 
     const createdPrompts = createdPromptsRaw.map((p) => ({
       promptId: p._id.toString(),
@@ -384,10 +415,11 @@ router.get("/activity/by-uid/:uid", async (req, res) => {
  * - answer content/author
  * - related prompt metadata
  */
-router.get("/search-discussions", async (req, res) => {
+router.get("/search-discussions", optionalAuth, async (req, res) => {
   try {
     const q = String(req.query.q ?? "").trim();
     const limit = Math.min(Number(req.query.limit) || 8, 25);
+    const viewerUid = req.uid ?? null;
     if (!q) {
       return res.json({ success: true, discussions: [] });
     }
@@ -397,11 +429,16 @@ router.get("/search-discussions", async (req, res) => {
     const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
     const matchedPrompts = await Prompt.find({
-      $or: [
-        { title: { $regex: escaped, $options: "i" } },
-        { description: { $regex: escaped, $options: "i" } },
-        { tags: { $regex: escaped, $options: "i" } },
-        { authorUsername: { $regex: escaped, $options: "i" } },
+      $and: [
+        {
+          $or: [
+            { title: { $regex: escaped, $options: "i" } },
+            { description: { $regex: escaped, $options: "i" } },
+            { tags: { $regex: escaped, $options: "i" } },
+            { authorUsername: { $regex: escaped, $options: "i" } },
+          ],
+        },
+        visibilityFilterFor(viewerUid),
       ],
     })
       .select("_id title")
@@ -451,7 +488,16 @@ router.get("/search-discussions", async (req, res) => {
       .limit(limit)
       .lean();
 
-    const qIds = questions.map((qDoc) => qDoc._id);
+    const questionPromptIds = [...new Set(questions.map((qDoc) => qDoc.promptId?.toString()).filter(Boolean))];
+    const visiblePromptDocs = questionPromptIds.length
+      ? await Prompt.find({
+          _id: { $in: questionPromptIds },
+          ...visibilityFilterFor(viewerUid),
+        }).select("_id title").lean()
+      : [];
+    const visiblePromptIdSet = new Set(visiblePromptDocs.map((p) => p._id.toString()));
+    const visibleQuestions = questions.filter((qDoc) => visiblePromptIdSet.has(qDoc.promptId?.toString() ?? ""));
+    const qIds = visibleQuestions.map((qDoc) => qDoc._id);
     const [answerCounts, relatedPrompts] = await Promise.all([
       qIds.length
         ? DiscussionAnswer.aggregate([
@@ -459,7 +505,7 @@ router.get("/search-discussions", async (req, res) => {
             { $group: { _id: "$questionId", count: { $sum: 1 } } },
           ])
         : [],
-      Prompt.find({ _id: { $in: questions.map((qDoc) => qDoc.promptId).filter(Boolean) } })
+      Prompt.find({ _id: { $in: visibleQuestions.map((qDoc) => qDoc.promptId).filter(Boolean) } })
         .select("_id title")
         .lean(),
     ]);
@@ -475,7 +521,7 @@ router.get("/search-discussions", async (req, res) => {
 
     res.json({
       success: true,
-      discussions: questions.map((qDoc) => ({
+      discussions: visibleQuestions.map((qDoc) => ({
         id: qDoc._id.toString(),
         promptId: qDoc.promptId?.toString() ?? "",
         promptTitle: promptTitles[qDoc.promptId?.toString() ?? ""] ?? "Untitled prompt",
@@ -504,10 +550,8 @@ router.get("/:id/upvote-status", optionalAuth, async (req, res) => {
     if (!uid) {
       return res.json({ success: true, upvoted: false });
     }
-    const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, uid ?? null)) return;
     if (prompt.authorUid === uid) {
       return res.status(400).json({
         success: false,
@@ -533,9 +577,7 @@ router.post("/:id/upvote", requireAuth, async (req, res) => {
     const actorUsername = (req.body?.authorUsername ?? "").toString().trim().toLowerCase() || null;
 
     const prompt = await Prompt.findById(id);
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    if (!ensurePromptAccessOr404(res, prompt, uid)) return;
 
     const existing = await Upvote.findOne({ promptId: id, uid });
     let upvoted;
@@ -583,9 +625,7 @@ router.post("/:id/fork", requireAuth, async (req, res) => {
     const { authorUsername } = req.body;
 
     const source = await Prompt.findById(id).lean();
-    if (!source) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    if (!ensurePromptAccessOr404(res, source, uid)) return;
     if (source.authorUid === uid) {
       return res.status(400).json({
         success: false,
@@ -638,13 +678,12 @@ router.post("/:id/fork", requireAuth, async (req, res) => {
  * GET /api/prompts/:id/contributors
  * Get contributors (authors of discussions, answers, PRs, forks).
  */
-router.get("/:id/contributors", async (req, res) => {
+router.get("/:id/contributors", optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    const viewerUid = req.uid ?? null;
     const prompt = await Prompt.findById(id).lean();
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    if (!ensurePromptAccessOr404(res, prompt, viewerUid)) return;
 
     const { DiscussionQuestion } = await import("../models/DiscussionQuestion.js");
     const { DiscussionAnswer } = await import("../models/DiscussionAnswer.js");
@@ -692,23 +731,19 @@ router.get("/:id/contributors", async (req, res) => {
  * GET /api/prompts/:id
  * Get a single prompt by ID. Increments view count.
  */
-router.get("/:id", async (req, res) => {
+router.get("/:id", optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    const viewerUid = req.uid ?? null;
 
-    const prompt = await Prompt.findByIdAndUpdate(
-      id,
-      { $inc: { "stats.views": 1 } },
-      { new: true }
-    ).lean();
-
-    if (!prompt) {
-      return res.status(404).json({ success: false, error: "Prompt not found" });
-    }
+    const prompt = await Prompt.findById(id).lean();
+    if (!ensurePromptAccessOr404(res, prompt, viewerUid)) return;
+    await Prompt.findByIdAndUpdate(id, { $inc: { "stats.views": 1 } });
+    const withUpdatedViews = await Prompt.findById(id).lean();
 
     res.json({
       success: true,
-      prompt: formatPrompt(prompt),
+      prompt: formatPrompt(withUpdatedViews ?? prompt),
     });
   } catch (err) {
     console.error("[prompt-service] GET /prompts/:id error:", err);
@@ -729,6 +764,7 @@ router.post("/", requireAuth, async (req, res) => {
       tags,
       primaryPrompt,
       guide,
+      visibility,
       parameters,
       variants,
       isPinned,
@@ -761,6 +797,7 @@ router.post("/", requireAuth, async (req, res) => {
       tags: Array.isArray(tags) ? tags.filter((t) => typeof t === "string").map((t) => t.trim()) : [],
       primaryPrompt: String(primaryPrompt).trim(),
       guide: typeof guide === "string" ? guide.trim() : null,
+      visibility: visibility === "unlisted" ? "unlisted" : "public",
       parameters: Array.isArray(parameters) ? parameters : [],
       variants: Array.isArray(variants) ? variants : [],
       isPinned: typeof isPinned === "boolean" ? isPinned : false,
@@ -784,7 +821,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
   try {
     const uid = req.uid;
     const { id } = req.params;
-    const { title, description, tags, primaryPrompt, guide, parameters, variants, isPinned } = req.body;
+    const { title, description, tags, primaryPrompt, guide, visibility, parameters, variants, isPinned } = req.body;
 
     const existing = await Prompt.findOne({ _id: id });
     if (!existing) {
@@ -800,6 +837,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
     if (Array.isArray(tags)) updates.tags = tags.filter((t) => typeof t === "string").map((t) => t.trim());
     if (primaryPrompt !== undefined && typeof primaryPrompt === "string") updates.primaryPrompt = primaryPrompt.trim();
     if (guide !== undefined) updates.guide = typeof guide === "string" ? guide.trim() : null;
+    if (visibility !== undefined) updates.visibility = visibility === "unlisted" ? "unlisted" : "public";
     if (Array.isArray(parameters)) updates.parameters = parameters;
     if (Array.isArray(variants)) updates.variants = variants;
     if (typeof isPinned === "boolean") updates.isPinned = isPinned;

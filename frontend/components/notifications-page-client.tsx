@@ -2,9 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { GitMerge, ArrowUp, GitFork, MessageCircle, Bell, UserPlus } from "lucide-react";
+import {
+  GitMerge,
+  ArrowUp,
+  GitFork,
+  MessageCircle,
+  Bell,
+  UserPlus,
+  GitPullRequest,
+  MessageSquareReply,
+  HelpCircle,
+} from "lucide-react";
 import { cn, formatRelative } from "@/lib/utils";
 import { useAuth } from "@/components/auth-provider";
+import { UserAvatar } from "@/components/user-avatar";
 import {
   archiveAllNotifications,
   archiveNotification,
@@ -13,25 +24,28 @@ import {
   markNotificationRead,
   type ApiNotification,
 } from "@/lib/api";
+import { emitUnreadNotificationCount } from "@/lib/notification-sync";
 
 const typeIcons: Record<ApiNotification["type"], React.ComponentType<{ className?: string }>> = {
   prompt_forked: GitFork,
   prompt_upvoted: ArrowUp,
-  discussion_answered: MessageCircle,
+  discussion_answered: MessageSquareReply,
   discussion_replied: MessageCircle,
-  discussion_question_on_my_prompt: MessageCircle,
-  pr_created: MessageCircle,
-  pr_commented: MessageCircle,
+  discussion_question_on_my_prompt: HelpCircle,
+  pr_created: GitPullRequest,
+  pr_commented: MessageSquareReply,
   pr_merged: GitMerge,
   user_followed: UserPlus,
 };
 
 export function NotificationsPageClient() {
   const { user, loading } = useAuth();
-  const [items, setItems] = useState<ApiNotification[]>([]);
+  const [activeItems, setActiveItems] = useState<ApiNotification[]>([]);
+  const [archivedItems, setArchivedItems] = useState<ApiNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
   const [archivingAll, setArchivingAll] = useState(false);
+  const [tab, setTab] = useState<"all" | "unread" | "archived">("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -39,15 +53,27 @@ export function NotificationsPageClient() {
     async function load() {
       if (!user) {
         if (!cancelled) {
-          setItems([]);
+          setActiveItems([]);
+          setArchivedItems([]);
           setIsLoading(false);
         }
         return;
       }
       const token = await user.getIdToken();
-      const result = await fetchNotifications(token, { limit: 50 });
+      const [activeResult, archivedResult] = await Promise.all([
+        fetchNotifications(token, { limit: 100 }),
+        fetchNotifications(token, { limit: 100, includeArchived: true }),
+      ]);
       if (!cancelled) {
-        setItems(result.success ? result.notifications : []);
+        setActiveItems(activeResult.success ? activeResult.notifications : []);
+        const archivedOnly = archivedResult.success
+          ? archivedResult.notifications.filter((item) => item.archived)
+          : [];
+        setArchivedItems(archivedOnly);
+        const unread = activeResult.success
+          ? activeResult.notifications.filter((item) => !item.read).length
+          : 0;
+        emitUnreadNotificationCount(unread);
         setIsLoading(false);
       }
     }
@@ -65,7 +91,11 @@ export function NotificationsPageClient() {
       const token = await user.getIdToken();
       const result = await markAllNotificationsRead(token);
       if (result.success) {
-        setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+        setActiveItems((prev) => {
+          const next = prev.map((n) => ({ ...n, read: true }));
+          emitUnreadNotificationCount(0);
+          return next;
+        });
       }
     } finally {
       setMarkingAll(false);
@@ -77,7 +107,13 @@ export function NotificationsPageClient() {
     const token = await user.getIdToken();
     const result = await markNotificationRead(token, id);
     if (result.success) {
-      setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      setActiveItems((prev) => {
+        const next = prev.map((n) => (n.id === id ? { ...n, read: true } : n));
+        const unread = next.filter((item) => !item.read).length;
+        emitUnreadNotificationCount(unread);
+        return next;
+      });
+      setArchivedItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
     }
   }
 
@@ -86,7 +122,16 @@ export function NotificationsPageClient() {
     const token = await user.getIdToken();
     const result = await archiveNotification(token, id);
     if (result.success) {
-      setItems((prev) => prev.filter((n) => n.id !== id));
+      const item = activeItems.find((notification) => notification.id === id);
+      setActiveItems((prev) => {
+        const next = prev.filter((n) => n.id !== id);
+        const unread = next.filter((notification) => !notification.read).length;
+        emitUnreadNotificationCount(unread);
+        return next;
+      });
+      if (item) {
+        setArchivedItems((prev) => [{ ...item, archived: true, read: true }, ...prev]);
+      }
     }
   }
 
@@ -97,7 +142,12 @@ export function NotificationsPageClient() {
       const token = await user.getIdToken();
       const result = await archiveAllNotifications(token);
       if (result.success) {
-        setItems([]);
+        setArchivedItems((prev) => [
+          ...activeItems.map((item) => ({ ...item, archived: true, read: true })),
+          ...prev,
+        ]);
+        setActiveItems([]);
+        emitUnreadNotificationCount(0);
       }
     } finally {
       setArchivingAll(false);
@@ -108,6 +158,11 @@ export function NotificationsPageClient() {
     return <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 text-sm text-muted-foreground">Loading notifications...</div>;
   }
 
+  const displayed =
+    tab === "all"
+      ? activeItems
+        : archivedItems;
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex items-center justify-between gap-3">
@@ -115,7 +170,7 @@ export function NotificationsPageClient() {
           <Bell className="size-5" />
           Notifications
         </h1>
-        {user && items.length > 0 && (
+        {user && activeItems.length > 0 && (
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -137,16 +192,54 @@ export function NotificationsPageClient() {
         )}
       </div>
 
-      {items.length === 0 ? (
+      <div className="mb-4 flex items-center gap-2 rounded-lg border border-border bg-card p-1">
+        <button
+          type="button"
+          className={cn(
+            "rounded-md px-3 py-1.5 text-sm",
+            tab === "all" ? "bg-background font-medium" : "text-muted-foreground hover:text-foreground"
+          )}
+          onClick={() => setTab("all")}
+        >
+          All {activeItems.length}
+        </button>
+        <button
+          type="button"
+          className={cn(
+            "rounded-md px-3 py-1.5 text-sm",
+            tab === "archived" ? "bg-background font-medium" : "text-muted-foreground hover:text-foreground"
+          )}
+          onClick={() => setTab("archived")}
+        >
+          Archived {archivedItems.length}
+        </button>
+      </div>
+
+      {displayed.length === 0 ? (
         <div className="rounded-lg border border-border bg-card p-12 text-center text-muted-foreground">
           <Bell className="mx-auto mb-4 size-12 opacity-50" />
-          <p className="font-medium">No notifications yet</p>
-          <p className="mt-1 text-sm">When someone interacts with your prompts, you&apos;ll see updates here.</p>
+          <p className="font-medium">
+            {tab === "archived" ? "No archived notifications" : "No notifications yet"}
+          </p>
+          <p className="mt-1 text-sm">
+            When someone interacts with your prompts, you&apos;ll see updates here.
+          </p>
         </div>
       ) : (
         <ul className="space-y-1">
-          {items.map((n) => {
+          {displayed.map((n) => {
             const Icon = typeIcons[n.type];
+            const metadata = n.metadata ?? {};
+            const contributionPreview =
+              typeof metadata.commentBodyPreview === "string"
+                ? metadata.commentBodyPreview
+                : typeof metadata.answerContentPreview === "string"
+                  ? metadata.answerContentPreview
+                : typeof metadata.questionTitle === "string"
+                  ? metadata.questionTitle
+                  : typeof metadata.prTitle === "string"
+                    ? metadata.prTitle
+                    : null;
             return (
               <li key={n.id}>
                 <div
@@ -158,26 +251,36 @@ export function NotificationsPageClient() {
                   <Link
                     href={n.link}
                     onClick={() => {
-                      if (!n.read) void handleMarkRead(n.id);
+                      if (!n.read && tab !== "archived") void handleMarkRead(n.id);
                     }}
                     className="flex min-w-0 flex-1 gap-3"
                   >
-                    <div className="mt-0.5 shrink-0">
-                      <Icon className="size-5 text-muted-foreground" />
+                    <div className="relative mt-0.5 shrink-0">
+                      <UserAvatar photoURL={null} name={n.actor ?? "System"} size="sm" />
+                      <span className="absolute -bottom-1 -right-1 rounded-full border border-background bg-muted p-0.5">
+                        <Icon className="size-3 text-muted-foreground" />
+                      </span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className={cn("text-sm", !n.read && "font-medium")}>{n.title}</p>
                       {n.body && <p className="mt-0.5 truncate text-xs text-muted-foreground">{n.body}</p>}
+                      {contributionPreview && (
+                        <div className="mt-2 rounded-md border border-border bg-background px-2 py-1 text-xs text-muted-foreground">
+                          {contributionPreview}
+                        </div>
+                      )}
                       <p className="mt-1 text-xs text-muted-foreground">{formatRelative(n.createdAt)}</p>
                     </div>
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => void handleArchive(n.id)}
-                    className="shrink-0 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    Archive
-                  </button>
+                  {tab !== "archived" && (
+                    <button
+                      type="button"
+                      onClick={() => void handleArchive(n.id)}
+                      className="shrink-0 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      Archive
+                    </button>
+                  )}
                 </div>
               </li>
             );

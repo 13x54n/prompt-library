@@ -25,6 +25,7 @@ export type Prompt = {
   parameters?: { name: string; placeholder?: string; type?: "text" | "select" }[];
   variants?: PromptVariant[];
   guide?: string;
+  visibility?: "public" | "unlisted";
 };
 
 export type PromptVariant = {
@@ -84,11 +85,14 @@ export type DiscussionQuestion = {
 export type DiscussionAnswer = {
   id: string;
   questionId: string;
+  parentAnswerId?: string | null;
+  depth?: number;
   content: string;
   author: string;
   createdAt: string;
   votes: number;
   accepted?: boolean;
+  replies?: DiscussionAnswer[];
 };
 
 export type Notification = {
@@ -111,4 +115,8 @@ export type Notification = {
   createdAt: string;
   actor?: string;
   actorUid?: string;
+  entityType?: "prompt" | "discussion_question" | "discussion_answer" | "pull_request" | "user";
+  entityId?: string;
+  promptId?: string;
+  metadata?: Record<string, unknown>;
 };

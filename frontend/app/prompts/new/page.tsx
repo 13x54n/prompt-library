@@ -53,6 +53,7 @@ export default function CreatePromptPage() {
         tags: tags.trim() ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
         primaryPrompt: primaryPrompt.trim(),
         guide: guide.trim() || undefined,
+        visibility,
         authorUsername,
       });
 

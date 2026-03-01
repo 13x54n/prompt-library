@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, MessageSquare, ArrowUp, Check } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth-provider";
@@ -15,6 +17,7 @@ import {
   acceptDiscussionAnswer,
 } from "@/lib/api";
 import type { DiscussionQuestion, DiscussionAnswer } from "@/lib/types";
+import { MarkdownEditor } from "./markdown-editor";
 
 type DiscussionSectionProps = {
   promptId: string;
@@ -23,8 +26,152 @@ type DiscussionSectionProps = {
   initialAnswersByQuestion: Record<string, DiscussionAnswer[]>;
 };
 
+function AnswerNode({
+  questionId,
+  answer,
+  isOwner,
+  onAnswerVote,
+  onReplyPost,
+  onAcceptAnswer,
+  onRefresh,
+  level = 0,
+  highlightedAnswerId,
+}: {
+  questionId: string;
+  answer: DiscussionAnswer;
+  isOwner: boolean;
+  onAnswerVote: (questionId: string, answerId: string) => void;
+  onReplyPost: (questionId: string, parentAnswerId: string, content: string) => Promise<boolean>;
+  onAcceptAnswer: (questionId: string, answerId: string) => void;
+  onRefresh: () => void;
+  level?: number;
+  highlightedAnswerId?: string | null;
+}) {
+  const [isReplyOpen, setIsReplyOpen] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [postingReply, setPostingReply] = useState(false);
+
+  async function handleReplyPost() {
+    if (!replyText.trim()) return;
+    setPostingReply(true);
+    try {
+      const posted = await onReplyPost(questionId, answer.id, replyText.trim());
+      if (posted) {
+        setReplyText("");
+        setIsReplyOpen(false);
+        onRefresh();
+      }
+    } finally {
+      setPostingReply(false);
+    }
+  }
+
+  const isTopLevelAnswer = !answer.parentAnswerId;
+
+  const isHighlighted = highlightedAnswerId === answer.id;
+
+  useEffect(() => {
+    if (!isHighlighted) return;
+    const element = document.getElementById(`answer-${answer.id}`);
+    if (!element) return;
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [answer.id, isHighlighted]);
+
+  return (
+    <div className={cn(level > 0 && "ml-6 border-l border-border/60 pl-4")}>
+      <div
+        id={`answer-${answer.id}`}
+        className={cn(
+          "rounded-lg border p-4 transition-colors",
+          answer.accepted
+            ? "border-primary/50 bg-primary/5"
+            : "border-border bg-muted/30",
+          isHighlighted && "ring-1 ring-primary/40 bg-primary/10"
+        )}
+      >
+        <div className="mb-2 flex items-center justify-between">
+          <span className="flex items-center gap-2 text-sm font-medium">
+            {answer.accepted && (
+              <span
+                className="flex items-center gap-1 rounded bg-primary/20 px-2 py-0.5 text-xs text-primary"
+                title="Accepted answer"
+              >
+                <Check className="size-3" />
+                Accepted
+              </span>
+            )}
+            @{answer.author}
+          </span>
+          <span className="text-xs text-muted-foreground">{answer.votes} upvotes</span>
+        </div>
+        <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
+          <ReactMarkdown>{answer.content}</ReactMarkdown>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">{answer.createdAt}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-xs"
+            onClick={() => onAnswerVote(questionId, answer.id)}
+          >
+            <ArrowUp className="mr-1 size-3.5" />
+            Upvote ({answer.votes})
+          </Button>
+          <Button size="sm" variant="ghost" className="text-xs" onClick={() => setIsReplyOpen((v) => !v)}>
+            {isReplyOpen ? "Cancel reply" : "Reply"}
+          </Button>
+          {isOwner && isTopLevelAnswer && !answer.accepted && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs"
+              onClick={() => onAcceptAnswer(questionId, answer.id)}
+            >
+              Accept answer
+            </Button>
+          )}
+        </div>
+
+        {isReplyOpen && (
+          <div className="mt-3">
+            <MarkdownEditor
+              content={replyText}
+              onChange={setReplyText}
+              placeholder="Write your reply..."
+              minRows={4}
+              submitLabel={postingReply ? "Posting..." : "Post reply"}
+              onSubmit={handleReplyPost}
+              onCancel={() => setIsReplyOpen(false)}
+              disabled={postingReply}
+            />
+          </div>
+        )}
+      </div>
+
+      {answer.replies && answer.replies.length > 0 && (
+        <div className="mt-3 space-y-3">
+          {answer.replies.map((reply) => (
+            <AnswerNode
+              key={reply.id}
+              questionId={questionId}
+              answer={reply}
+              isOwner={isOwner}
+              onAnswerVote={onAnswerVote}
+              onReplyPost={onReplyPost}
+              onAcceptAnswer={onAcceptAnswer}
+              onRefresh={onRefresh}
+              level={level + 1}
+              highlightedAnswerId={highlightedAnswerId}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function QuestionItem({
-  promptId,
   isOwner,
   question,
   answers,
@@ -33,10 +180,12 @@ function QuestionItem({
   onQuestionVote,
   onAnswerVote,
   onAnswerPost,
+  onReplyPost,
   onAcceptAnswer,
   onRefresh,
+  highlightedAnswerId,
+  highlightedQuestionId,
 }: {
-  promptId: string;
   isOwner: boolean;
   question: DiscussionQuestion;
   answers: DiscussionAnswer[];
@@ -44,9 +193,12 @@ function QuestionItem({
   onToggle: () => void;
   onQuestionVote: (questionId: string) => void;
   onAnswerVote: (questionId: string, answerId: string) => void;
-  onAnswerPost: (questionId: string, content: string) => void;
+  onAnswerPost: (questionId: string, content: string) => Promise<boolean>;
+  onReplyPost: (questionId: string, parentAnswerId: string, content: string) => Promise<boolean>;
   onAcceptAnswer: (questionId: string, answerId: string) => void;
   onRefresh: () => void;
+  highlightedAnswerId?: string | null;
+  highlightedQuestionId?: string | null;
 }) {
   const [answerText, setAnswerText] = useState("");
   const [postingAnswer, setPostingAnswer] = useState(false);
@@ -55,28 +207,39 @@ function QuestionItem({
     if (!answerText.trim()) return;
     setPostingAnswer(true);
     try {
-      await onAnswerPost(question.id, answerText.trim());
-      setAnswerText("");
-      onRefresh();
+      const posted = await onAnswerPost(question.id, answerText.trim());
+      if (posted) {
+        setAnswerText("");
+        onRefresh();
+      }
     } finally {
       setPostingAnswer(false);
     }
   }
 
+  const isQuestionHighlighted = highlightedQuestionId === question.id;
+
+  useEffect(() => {
+    if (!isQuestionHighlighted) return;
+    const element = document.getElementById(`discussion-${question.id}`);
+    if (!element) return;
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [isQuestionHighlighted, question.id]);
+
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div
+      id={`discussion-${question.id}`}
+      className={cn(
+        "rounded-lg border border-border bg-card transition-colors",
+        isQuestionHighlighted && "ring-1 ring-primary/40 bg-primary/5"
+      )}
+    >
       <button
         type="button"
         onClick={onToggle}
         className="flex w-full items-start gap-4 p-4 text-left transition-colors hover:bg-muted/50"
       >
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); onQuestionVote(question.id); }}
-          onKeyDown={(e) => e.key === "Enter" && (e.stopPropagation(), onQuestionVote(question.id))}
-          className="flex shrink-0 flex-col items-center gap-1 rounded p-1 hover:bg-muted/50"
-        >
+        <div className="flex shrink-0 flex-col items-center gap-1 rounded p-1">
           <ArrowUp className="size-4 text-muted-foreground" />
           <span className="text-sm font-medium">{question.votes}</span>
         </div>
@@ -86,9 +249,7 @@ function QuestionItem({
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="font-medium hover:text-primary">{question.title}</h3>
-          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-            {question.body}
-          </p>
+          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{question.body}</p>
           <p className="mt-2 text-xs text-muted-foreground">
             @{question.author} · {question.createdAt}
           </p>
@@ -103,72 +264,46 @@ function QuestionItem({
 
       {isExpanded && (
         <div className="border-t border-border p-4">
-          <div className="space-y-4 pl-12">
-            {answers.map((answer) => (
-              <div
-                key={answer.id}
-                className={cn(
-                  "rounded-lg border p-4",
-                  answer.accepted
-                    ? "border-primary/50 bg-primary/5"
-                    : "border-border bg-muted/30"
-                )}
-              >
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-sm font-medium">
-                    {answer.accepted && (
-                      <span
-                        className="flex items-center gap-1 rounded bg-primary/20 px-2 py-0.5 text-xs text-primary"
-                        title="Accepted answer"
-                      >
-                        <Check className="size-3" />
-                        Accepted
-                      </span>
-                    )}
-                    @{answer.author}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onAnswerVote(question.id, answer.id)}
-                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                  >
-                    <ArrowUp className="size-4" />
-                    {answer.votes}
-                  </button>
-                </div>
-                <p className="whitespace-pre-wrap text-sm">{answer.content}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {answer.createdAt}
-                </p>
-                {isOwner && !answer.accepted && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="mt-2 text-xs"
-                    onClick={() => onAcceptAnswer(question.id, answer.id)}
-                  >
-                    Accept answer
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 pl-12">
-            <textarea
-              placeholder="Write your answer..."
-              rows={3}
-              value={answerText}
-              onChange={(e) => setAnswerText(e.target.value)}
-              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-            />
+          <div className="mb-3 pl-4">
             <Button
               size="sm"
-              className="mt-2"
-              onClick={handlePostAnswer}
-              disabled={postingAnswer || !answerText.trim()}
+              variant="ghost"
+              className="text-xs"
+              onClick={() => onQuestionVote(question.id)}
             >
-              {postingAnswer ? "Posting…" : "Post Answer"}
+              <ArrowUp className="mr-1 size-3.5" />
+              Upvote ({question.votes})
             </Button>
+          </div>
+
+          <div className="space-y-4 pl-4">
+            {answers.map((answer) => (
+              <AnswerNode
+                key={answer.id}
+                questionId={question.id}
+                answer={answer}
+                isOwner={isOwner}
+                onAnswerVote={onAnswerVote}
+                onReplyPost={onReplyPost}
+                onAcceptAnswer={onAcceptAnswer}
+                onRefresh={onRefresh}
+                highlightedAnswerId={highlightedAnswerId}
+              />
+            ))}
+            {answers.length === 0 && (
+              <p className="text-sm text-muted-foreground">No answers yet. Add the first answer below.</p>
+            )}
+          </div>
+          <div className="mt-4 pl-4">
+            <MarkdownEditor
+              content={answerText}
+              onChange={setAnswerText}
+              placeholder="Write your answer..."
+              minRows={5}
+              submitLabel={postingAnswer ? "Posting..." : "Post answer"}
+              onSubmit={handlePostAnswer}
+              disabled={postingAnswer}
+            />
           </div>
         </div>
       )}
@@ -183,6 +318,7 @@ export function DiscussionSection({
   initialAnswersByQuestion,
 }: DiscussionSectionProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, currentUser } = useAuth();
   const [questions, setQuestions] = useState(initialQuestions);
   const [answersByQuestion, setAnswersByQuestion] = useState(initialAnswersByQuestion);
@@ -191,6 +327,13 @@ export function DiscussionSection({
   const [askTitle, setAskTitle] = useState("");
   const [askBody, setAskBody] = useState("");
   const [postingQuestion, setPostingQuestion] = useState(false);
+  const highlightedQuestionId = searchParams.get("question");
+  const highlightedAnswerId = searchParams.get("answer");
+
+  useEffect(() => {
+    if (!highlightedQuestionId) return;
+    setExpandedId(highlightedQuestionId);
+  }, [highlightedQuestionId]);
 
   const isOwner = Boolean(currentUser?.uid && promptAuthorUid && currentUser.uid === promptAuthorUid);
 
@@ -247,13 +390,28 @@ export function DiscussionSection({
   async function handleAnswerPost(questionId: string, content: string) {
     if (!user || !currentUser) {
       router.push("/login");
-      return;
+      return false;
     }
     const token = await user.getIdToken();
     const authorUsername = currentUser.username ?? currentUser.profileSlug ?? "unknown";
     const result = await createDiscussionAnswer(token, promptId, questionId, {
       content,
       authorUsername,
+    });
+    return result.success;
+  }
+
+  async function handleReplyPost(questionId: string, parentAnswerId: string, content: string) {
+    if (!user || !currentUser) {
+      router.push("/login");
+      return false;
+    }
+    const token = await user.getIdToken();
+    const authorUsername = currentUser.username ?? currentUser.profileSlug ?? "unknown";
+    const result = await createDiscussionAnswer(token, promptId, questionId, {
+      content,
+      authorUsername,
+      parentAnswerId,
     });
     return result.success;
   }
@@ -289,24 +447,17 @@ export function DiscussionSection({
             onChange={(e) => setAskTitle(e.target.value)}
             className="mb-3 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
-          <textarea
+          <MarkdownEditor
+            content={askBody}
+            onChange={setAskBody}
             placeholder="Describe your question in detail..."
-            rows={5}
-            value={askBody}
-            onChange={(e) => setAskBody(e.target.value)}
-            className="mb-4 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            minRows={6}
+            submitLabel={postingQuestion ? "Posting..." : "Post discussion"}
+            onSubmit={handleAskQuestion}
+            onCancel={() => setIsComposerOpen(false)}
+            disabled={postingQuestion}
+            submitDisabled={!askTitle.trim() || !askBody.trim()}
           />
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsComposerOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAskQuestion}
-              disabled={postingQuestion || !askTitle.trim() || !askBody.trim()}
-            >
-              {postingQuestion ? "Posting..." : "Post discussion"}
-            </Button>
-          </div>
         </div>
       )}
 
@@ -314,7 +465,6 @@ export function DiscussionSection({
         {questions.map((q) => (
           <QuestionItem
             key={q.id}
-            promptId={promptId}
             isOwner={!!isOwner}
             question={q}
             answers={answersByQuestion[q.id] ?? []}
@@ -323,8 +473,11 @@ export function DiscussionSection({
             onQuestionVote={handleQuestionVote}
             onAnswerVote={handleAnswerVote}
             onAnswerPost={handleAnswerPost}
+            onReplyPost={handleReplyPost}
             onAcceptAnswer={isOwner ? handleAcceptAnswer : () => {}}
             onRefresh={refreshDiscussions}
+            highlightedAnswerId={highlightedAnswerId}
+            highlightedQuestionId={highlightedQuestionId}
           />
         ))}
       </div>

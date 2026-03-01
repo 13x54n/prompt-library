@@ -13,9 +13,43 @@ import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
 import { useAuth } from "@/components/auth-provider";
 import { signOut } from "@/lib/auth";
-import { fetchNotifications, fetchUnreadNotificationCount, type ApiNotification } from "@/lib/api";
+import {
+  fetchNotifications,
+  fetchUnreadNotificationCount,
+  markNotificationRead,
+  type ApiNotification,
+} from "@/lib/api";
+import {
+  emitUnreadNotificationCount,
+  onUnreadNotificationCountUpdated,
+} from "@/lib/notification-sync";
 import { formatRelative } from "@/lib/utils";
-import { LogOut, User, Bell, Plus } from "lucide-react";
+import {
+  LogOut,
+  User,
+  Bell,
+  Plus,
+  GitMerge,
+  ArrowUp,
+  GitFork,
+  MessageCircle,
+  UserPlus,
+  GitPullRequest,
+  MessageSquareReply,
+  HelpCircle,
+} from "lucide-react";
+
+const notificationTypeIcons: Record<ApiNotification["type"], React.ComponentType<{ className?: string }>> = {
+  prompt_forked: GitFork,
+  prompt_upvoted: ArrowUp,
+  discussion_answered: MessageSquareReply,
+  discussion_replied: MessageCircle,
+  discussion_question_on_my_prompt: HelpCircle,
+  pr_created: GitPullRequest,
+  pr_commented: MessageSquareReply,
+  pr_merged: GitMerge,
+  user_followed: UserPlus,
+};
 
 function NotificationDropdown({ user }: { user: { getIdToken: () => Promise<string> } | null }) {
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
@@ -43,8 +77,14 @@ function NotificationDropdown({ user }: { user: { getIdToken: () => Promise<stri
     }
 
     loadNotifications();
+    const unsubscribe = onUnreadNotificationCountUpdated((nextUnreadCount) => {
+      if (cancelled) return;
+      setUnreadCount(nextUnreadCount);
+    });
+
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [user]);
 
@@ -67,10 +107,34 @@ function NotificationDropdown({ user }: { user: { getIdToken: () => Promise<stri
           </div>
         ) : (
           notifications.map((n) => (
-            <DropdownMenuItem key={n.id} asChild>
-              <Link href={n.link} className="flex flex-col items-start gap-0.5 py-2">
-                <span className="line-clamp-1 text-sm">{n.title}</span>
-                <span className="line-clamp-1 text-xs text-muted-foreground">{n.body ?? formatRelative(n.createdAt)}</span>
+            <DropdownMenuItem className="px-4" key={n.id} asChild>
+              <Link
+                href={n.link}
+                onClick={() => {
+                  if (!user || n.read) return;
+                  const nextUnreadCount = Math.max(0, unreadCount - 1);
+                  setUnreadCount(nextUnreadCount);
+                  emitUnreadNotificationCount(nextUnreadCount);
+                  setNotifications((prev) =>
+                    prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
+                  );
+                  void user
+                    .getIdToken()
+                    .then((token) => markNotificationRead(token, n.id))
+                    .catch(() => {});
+                }}
+                className="flex items-center gap-4 py-2"
+              >
+                {(() => {
+                  const Icon = notificationTypeIcons[n.type];
+                  return <Icon className="mt-0.5 size-5 shrink-0 text-muted-foreground " />;
+                })()}
+                <span className="min-w-0">
+                  <span className="line-clamp-1 text-sm">{n.title}</span>
+                  <span className="line-clamp-1 text-xs text-muted-foreground">
+                    {n.body ?? formatRelative(n.createdAt)}
+                  </span>
+                </span>
               </Link>
             </DropdownMenuItem>
           ))

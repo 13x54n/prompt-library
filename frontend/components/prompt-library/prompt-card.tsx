@@ -79,28 +79,22 @@ export function PromptCard({ prompt, className }: PromptCardProps) {
             </Link>
           </p>
         </div>
-        {prompt.parentPromptId && (
+        {prompt.parentPromptId && prompt.parentPromptTitle && (
           <p className="mt-1 text-xs text-muted-foreground">
             Forked from{" "}
-            {prompt.parentPromptTitle ? (
-              <>
-                <Link href={`/prompts/${prompt.parentPromptId}`} className="hover:underline">
-                  {prompt.parentPromptTitle}
-                </Link>
-                {prompt.parentPromptUsername && (
-                  <>
-                    {" "}by{" "}
-                    <Link href={parentAuthorHref ?? "#"} className="hover:underline">
-                      @{prompt.parentPromptUsername}
-                    </Link>
-                  </>
-                )}
-              </>
-            ) : (
+            <>
               <Link href={`/prompts/${prompt.parentPromptId}`} className="hover:underline">
-                prompt
+                {prompt.parentPromptTitle}
               </Link>
-            )}
+              {prompt.parentPromptUsername && (
+                <>
+                  {" "}by{" "}
+                  <Link href={parentAuthorHref ?? "#"} className="hover:underline">
+                    @{prompt.parentPromptUsername}
+                  </Link>
+                </>
+              )}
+            </>
           </p>
         )}
       </div>

@@ -5,6 +5,10 @@ const prCommentSchema = new mongoose.Schema(
     authorUid: { type: String, required: true },
     authorUsername: { type: String, required: true },
     body: { type: String, required: true },
+    parentId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    depth: { type: Number, default: 0 },
+    votes: { type: Number, default: 0 },
+    voteUids: [{ type: String }],
   },
   { timestamps: true, _id: true }
 );
@@ -29,5 +33,6 @@ const pullRequestSchema = new mongoose.Schema(
 );
 
 pullRequestSchema.index({ promptId: 1, status: 1, createdAt: -1 });
+pullRequestSchema.index({ promptId: 1, "comments.parentId": 1, "comments.createdAt": 1 });
 
 export const PullRequest = mongoose.model("PullRequest", pullRequestSchema);

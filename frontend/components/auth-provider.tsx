@@ -97,8 +97,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    const setAuthCookie = async (firebaseUser: User | null) => {
+      if (!firebaseUser) {
+        document.cookie = "pl_id_token=; path=/; max-age=0; SameSite=Lax";
+        return;
+      }
+      try {
+        const token = await firebaseUser.getIdToken();
+        const maxAge = 60 * 55;
+        document.cookie = `pl_id_token=${encodeURIComponent(token)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+      } catch {
+        document.cookie = "pl_id_token=; path=/; max-age=0; SameSite=Lax";
+      }
+    };
+
     const unsubscribe = subscribeToAuthState(async (firebaseUser) => {
       setUser(firebaseUser);
+      await setAuthCookie(firebaseUser);
       if (!firebaseUser) {
         setBackendUser(null);
       } else {

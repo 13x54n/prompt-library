@@ -75,18 +75,22 @@ export type ApiPrompt = {
   parameters?: { name: string; placeholder?: string; type?: "text" | "select" }[];
   variants?: { id: string; content: string; author: string; votes: number; accepted?: boolean }[];
   guide?: string | null;
+  visibility?: "public" | "unlisted";
 };
 
 export async function fetchPromptById(
-  id: string
+  id: string,
+  idToken?: string
 ): Promise<
   | { success: true; prompt: ApiPrompt }
   | { success: false; error: string }
 > {
   try {
+    const headers: HeadersInit = {};
+    if (idToken) headers.Authorization = `Bearer ${idToken}`;
     const res = await fetch(
       `${PROMPT_SERVICE_URL}/api/prompts/${encodeURIComponent(id)}`,
-      { next: { revalidate: 30 } }
+      { next: { revalidate: 30 }, headers }
     );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -119,12 +123,15 @@ export async function fetchPromptsByAuthor(
 }
 
 export async function fetchPromptsByAuthorUid(
-  uid: string
+  uid: string,
+  idToken?: string
 ): Promise<{ success: true; prompts: ApiPrompt[] } | { success: false; error: string }> {
   try {
+    const headers: HeadersInit = {};
+    if (idToken) headers.Authorization = `Bearer ${idToken}`;
     const res = await fetch(
       `${PROMPT_SERVICE_URL}/api/prompts/by-author-uid/${encodeURIComponent(uid)}`,
-      { next: { revalidate: 30 } }
+      { next: { revalidate: 30 }, headers }
     );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -145,7 +152,7 @@ export async function fetchPrompts(params?: {
   limit?: number;
   offset?: number;
   sort?: "createdAt" | "updatedAt" | "upvotes" | "views";
-}): Promise<
+}, idToken?: string): Promise<
   | { success: true; prompts: ApiPrompt[]; total: number }
   | { success: false; error: string }
 > {
@@ -166,7 +173,9 @@ export async function fetchPrompts(params?: {
       ? `${PROMPT_SERVICE_URL}/api/prompts?${qs}`
       : `${PROMPT_SERVICE_URL}/api/prompts`;
 
-    const res = await fetch(url, { next: { revalidate: 15 } });
+    const headers: HeadersInit = {};
+    if (idToken) headers.Authorization = `Bearer ${idToken}`;
+    const res = await fetch(url, { next: { revalidate: 15 }, headers });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       return { success: false, error: data?.error ?? "Failed to fetch prompts" };
@@ -281,15 +290,18 @@ export async function fetchUserContributionActivity(
 }
 
 export async function fetchUserContributionActivityByUid(
-  uid: string
+  uid: string,
+  idToken?: string
 ): Promise<
   | { success: true; activity: ApiUserContributionActivity }
   | { success: false; error: string }
 > {
   try {
+    const headers: HeadersInit = {};
+    if (idToken) headers.Authorization = `Bearer ${idToken}`;
     const res = await fetch(
       `${PROMPT_SERVICE_URL}/api/prompts/activity/by-uid/${encodeURIComponent(uid)}`,
-      { cache: "no-store" }
+      { cache: "no-store", headers }
     );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -308,6 +320,7 @@ export type CreatePromptPayload = {
   tags?: string | string[];
   primaryPrompt: string;
   guide?: string;
+  visibility?: "public" | "unlisted";
   authorUsername: string;
 };
 
@@ -335,6 +348,7 @@ export async function createPrompt(
             : [],
         primaryPrompt: payload.primaryPrompt.trim(),
         guide: payload.guide?.trim() || null,
+        visibility: payload.visibility === "unlisted" ? "unlisted" : "public",
         authorUsername: payload.authorUsername.trim().toLowerCase(),
       }),
     });
@@ -389,6 +403,7 @@ export async function updatePrompt(
     tags?: string[];
     primaryPrompt?: string;
     guide?: string | null;
+    visibility?: "public" | "unlisted";
   }
 ): Promise<
   | { success: true; prompt: ApiPrompt }
@@ -417,6 +432,31 @@ export async function updatePrompt(
   }
 }
 
+export async function deletePrompt(
+  idToken: string,
+  promptId: string
+): Promise<{ success: true; deleted: boolean } | { success: false; error: string }> {
+  try {
+    const res = await fetch(
+      `${PROMPT_SERVICE_URL}/api/prompts/${encodeURIComponent(promptId)}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data?.error ?? "Failed to delete prompt" };
+    }
+    return data;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "fetch failed";
+    return { success: false, error: message };
+  }
+}
+
 // --- Discussions ---
 export type ApiDiscussionQuestion = {
   id: string;
@@ -432,16 +472,20 @@ export type ApiDiscussionQuestion = {
 export type ApiDiscussionAnswer = {
   id: string;
   questionId: string;
+  parentAnswerId?: string | null;
+  depth?: number;
   content: string;
   author: string;
   authorUid?: string;
   createdAt: string;
   votes: number;
   accepted?: boolean;
+  replies?: ApiDiscussionAnswer[];
 };
 
 export async function fetchDiscussions(
-  promptId: string
+  promptId: string,
+  idToken?: string
 ): Promise<
   | {
       success: true;
@@ -451,9 +495,11 @@ export async function fetchDiscussions(
   | { success: false; error: string }
 > {
   try {
+    const headers: HeadersInit = {};
+    if (idToken) headers.Authorization = `Bearer ${idToken}`;
     const res = await fetch(
       `${PROMPT_SERVICE_URL}/api/prompts/${encodeURIComponent(promptId)}/discussions`,
-      { cache: "no-store" }
+      { cache: "no-store", headers }
     );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -499,7 +545,7 @@ export async function createDiscussionAnswer(
   idToken: string,
   promptId: string,
   questionId: string,
-  payload: { content: string; authorUsername: string }
+  payload: { content: string; authorUsername: string; parentAnswerId?: string }
 ): Promise<
   | { success: true; answer: ApiDiscussionAnswer }
   | { success: false; error: string }
@@ -519,6 +565,38 @@ export async function createDiscussionAnswer(
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       return { success: false, error: data?.error ?? "Failed to post answer" };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "fetch failed" };
+  }
+}
+
+export async function createDiscussionReply(
+  idToken: string,
+  promptId: string,
+  questionId: string,
+  answerId: string,
+  payload: { content: string; authorUsername: string }
+): Promise<
+  | { success: true; answer: ApiDiscussionAnswer }
+  | { success: false; error: string }
+> {
+  try {
+    const res = await fetch(
+      `${PROMPT_SERVICE_URL}/api/prompts/${encodeURIComponent(promptId)}/discussions/${encodeURIComponent(questionId)}/answers/${encodeURIComponent(answerId)}/replies`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data?.error ?? "Failed to post reply" };
     }
     return data;
   } catch (err) {
@@ -609,19 +687,36 @@ export type ApiPullRequest = ApiPullRequestSummary & {
   proposedPrimaryPrompt?: string | null;
   proposedGuide?: string | null;
   proposedTags?: string[];
-  comments: { id: string; author: string; authorUid?: string | null; body: string; createdAt: string }[];
+  comments: ApiPullRequestComment[];
+  commentTree?: ApiPullRequestComment[];
+};
+
+export type ApiPullRequestComment = {
+  id: string;
+  author: string;
+  authorUid?: string | null;
+  body: string;
+  parentId?: string | null;
+  depth?: number;
+  votes?: number;
+  viewerHasVoted?: boolean;
+  createdAt: string;
+  replies?: ApiPullRequestComment[];
 };
 
 export async function fetchPullRequests(
-  promptId: string
+  promptId: string,
+  idToken?: string
 ): Promise<
   | { success: true; pullRequests: ApiPullRequestSummary[] }
   | { success: false; error: string }
 > {
   try {
+    const headers: HeadersInit = {};
+    if (idToken) headers.Authorization = `Bearer ${idToken}`;
     const res = await fetch(
       `${PROMPT_SERVICE_URL}/api/prompts/${encodeURIComponent(promptId)}/pull-requests`,
-      { cache: "no-store" }
+      { cache: "no-store", headers }
     );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -697,9 +792,9 @@ export async function addPullRequestComment(
   idToken: string,
   promptId: string,
   prId: string,
-  payload: { body: string; authorUsername: string }
+  payload: { body: string; authorUsername: string; parentId?: string }
 ): Promise<
-  | { success: true; comment: { id: string; author: string; body: string; createdAt: string } }
+  | { success: true; comment: ApiPullRequestComment }
   | { success: false; error: string }
 > {
   try {
@@ -717,6 +812,62 @@ export async function addPullRequestComment(
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       return { success: false, error: data?.error ?? "Failed to add comment" };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "fetch failed" };
+  }
+}
+
+export async function addPullRequestCommentReply(
+  idToken: string,
+  promptId: string,
+  prId: string,
+  commentId: string,
+  payload: { body: string; authorUsername: string }
+): Promise<
+  | { success: true; comment: ApiPullRequestComment }
+  | { success: false; error: string }
+> {
+  try {
+    const res = await fetch(
+      `${PROMPT_SERVICE_URL}/api/prompts/${encodeURIComponent(promptId)}/pull-requests/${encodeURIComponent(prId)}/comments/${encodeURIComponent(commentId)}/replies`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data?.error ?? "Failed to add reply" };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "fetch failed" };
+  }
+}
+
+export async function votePullRequestComment(
+  idToken: string,
+  promptId: string,
+  prId: string,
+  commentId: string
+): Promise<{ success: true; votes: number; hasVoted: boolean } | { success: false; error: string }> {
+  try {
+    const res = await fetch(
+      `${PROMPT_SERVICE_URL}/api/prompts/${encodeURIComponent(promptId)}/pull-requests/${encodeURIComponent(prId)}/comments/${encodeURIComponent(commentId)}/vote`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+      }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data?.error ?? "Failed to vote" };
     }
     return data;
   } catch (err) {
@@ -846,15 +997,18 @@ export async function forkPrompt(
 
 // --- Contributors ---
 export async function fetchContributors(
-  promptId: string
+  promptId: string,
+  idToken?: string
 ): Promise<
   | { success: true; contributors: { uid: string; username: string; contributions: number }[] }
   | { success: false; error: string }
 > {
   try {
+    const headers: HeadersInit = {};
+    if (idToken) headers.Authorization = `Bearer ${idToken}`;
     const res = await fetch(
       `${PROMPT_SERVICE_URL}/api/prompts/${encodeURIComponent(promptId)}/contributors`,
-      { cache: "no-store" }
+      { cache: "no-store", headers }
     );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -886,6 +1040,10 @@ export type ApiNotification = {
   createdAt: string;
   actor?: string;
   actorUid?: string;
+  entityType?: "prompt" | "discussion_question" | "discussion_answer" | "pull_request" | "user";
+  entityId?: string;
+  promptId?: string;
+  metadata?: Record<string, unknown>;
 };
 
 export async function followUser(

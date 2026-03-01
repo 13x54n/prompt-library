@@ -2,7 +2,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut as firebaseSignOut,
-  onAuthStateChanged,
+  onIdTokenChanged,
   User,
 } from "firebase/auth";
 import { auth } from "./firebase";
@@ -68,7 +68,7 @@ export async function signOut() {
 }
 
 export function subscribeToAuthState(callback: (user: User | null) => void) {
-  return onAuthStateChanged(auth, callback);
+  return onIdTokenChanged(auth, callback);
 }
 
 export async function fetchBackendUser(idToken: string): Promise<BackendUser | null> {
