@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const loginRecordSchema = new mongoose.Schema(
   {
     uid: { type: String, required: true },
-    email: { type: String, required: true, lowercase: true, trim: true, index: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
     username: { type: String, default: null }, // unique handle for profile URL and @mentions
     displayName: { type: String, default: null },
     photoURL: { type: String, default: null },
