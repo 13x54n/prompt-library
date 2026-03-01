@@ -63,11 +63,14 @@ export function ExploreFeedClient({ initialPrompts }: ExploreFeedClientProps) {
         setFollowingPrompts([]);
         return;
       }
-      const res = await fetchPrompts({
-        authorUids: following.followingUids,
-        sort: "createdAt",
-        limit: 50,
-      });
+      const res = await fetchPrompts(
+        {
+          authorUids: following.followingUids,
+          sort: "createdAt",
+          limit: 50,
+        },
+        token
+      );
       if (cancelled) return;
       setFollowingPrompts(res.success ? res.prompts.map(toPromptCard) : []);
     }
@@ -111,11 +114,14 @@ export function ExploreFeedClient({ initialPrompts }: ExploreFeedClientProps) {
         setFollowingPrompts([]);
         return;
       }
-      const res = await fetchPrompts({
-        authorUids: following.followingUids,
-        sort: "createdAt",
-        limit: 50,
-      });
+      const res = await fetchPrompts(
+        {
+          authorUids: following.followingUids,
+          sort: "createdAt",
+          limit: 50,
+        },
+        token
+      );
       setFollowingPrompts(res.success ? res.prompts.map(toPromptCard) : []);
       if (!res.success) setError(res.error);
     } finally {

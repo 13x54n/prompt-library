@@ -183,21 +183,21 @@ export function PromptHeader({
 
   return (
     <header className={cn("space-y-3", className)}>
-      <div className="flex flex-wrap items-start gap-3">
+      <div className="flex min-w-0 flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{prompt.title}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
+          <h1 className="break-words text-2xl font-bold tracking-tight">{prompt.title}</h1>
+          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-3">
             <PromptStats
               upvotes={upvotes}
               forks={prompt.stats.forks}
               views={prompt.stats.views}
               size="md"
             />
-            <span className="text-muted-foreground">by {prompt.username}</span>
+            <span className="min-w-0 truncate text-muted-foreground">by {prompt.username}</span>
             {prompt.parentPromptId && (
               <Link
                 href={`/prompts/${prompt.parentPromptId}`}
-                className="text-xs text-muted-foreground hover:underline"
+                className="min-w-0 break-words text-xs text-muted-foreground hover:underline"
               >
                 {parentPrompt
                   ? `Forked from ${parentPrompt.title} by @${parentPrompt.username}`
@@ -207,7 +207,7 @@ export function PromptHeader({
           </div>
         </div>
       </div>
-      <p className="text-muted-foreground">{prompt.description}</p>
+      <p className="min-w-0 break-words text-muted-foreground">{prompt.description}</p>
       <div className="flex flex-wrap items-center gap-2 mt-6">
         {!isOwner && (
           <Button

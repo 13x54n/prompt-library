@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
-import { BarChart3, Users } from "lucide-react";
+import { BarChart3, GitPullRequest, Users } from "lucide-react";
 import {
   PromptHeader,
   PromptCodeBlock,
@@ -130,10 +130,10 @@ export default async function PromptDetailPage({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div className="mx-auto flex min-h-0 max-w-6xl flex-1 flex-col gap-6 overflow-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-8 lg:grid lg:grid-cols-[minmax(0,200px)_minmax(0,1fr)_minmax(0,240px)] lg:items-stretch lg:gap-8">
-          {/* Left sidebar: Pull requests - fixed, does not scroll */}
-          <div className="order-2 min-w-0 shrink-0 self-start lg:order-1">
+    <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden bg-background">
+      <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col gap-6 overflow-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-8 lg:grid lg:grid-cols-[minmax(0,200px)_minmax(0,1fr)_minmax(0,240px)] lg:items-stretch lg:gap-8">
+          {/* Left sidebar: Pull requests - hidden on mobile, link shown in main instead */}
+          <div className="order-2 hidden min-w-0 shrink-0 self-start lg:order-1 lg:block">
             <PullRequestsSidebar
               promptId={id}
               pullRequests={pullRequests}
@@ -141,7 +141,17 @@ export default async function PromptDetailPage({
           </div>
 
           {/* Main content - only this scrolls */}
-          <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto lg:order-2">
+          <main className="order-1 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto lg:order-2">
+            {/* Mobile: PRs link - shown only when sidebar is hidden */}
+            <div className="mb-4 flex flex-wrap items-center gap-2 lg:hidden">
+              <Link
+                href={`/prompts/${id}/pull-requests`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50"
+              >
+                <GitPullRequest className="size-4" />
+                Pull requests {pullRequests.length > 0 && `(${pullRequests.length})`}
+              </Link>
+            </div>
             {/* Overview */}
             <div id="overview" className="scroll-mt-8 space-y-8">
               <PromptHeader
@@ -169,15 +179,15 @@ export default async function PromptDetailPage({
             </div>
           </main>
 
-          {/* Right sidebar: Contributors & Insights - fixed, does not scroll */}
-          <aside className="order-3 min-w-0 shrink-0 self-start space-y-6 lg:sticky lg:top-8">
+          {/* Right sidebar: Contributors & Insights - below main on mobile */}
+          <aside className="order-3 w-full min-w-0 shrink-0 self-start space-y-4 sm:space-y-6 lg:sticky lg:top-8 lg:w-auto">
             
             <div>
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <BarChart3 className="size-4" />
+              <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground sm:mb-3">
+                <BarChart3 className="size-4 shrink-0" />
                 Insights
               </h3>
-              <div className="space-y-2 rounded-lg border border-border bg-card p-4">
+              <div className="space-y-2 rounded-lg border border-border bg-card p-3 sm:p-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Views (7d)</span>
                   <span className="font-medium">{prompt.stats.views.toLocaleString()}</span>
@@ -193,8 +203,8 @@ export default async function PromptDetailPage({
               </div>
             </div>
             <div>
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Users className="size-4" />
+              <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground sm:mb-3">
+                <Users className="size-4 shrink-0" />
                 Contributors
               </h3>
               <div className="rounded-lg border border-border bg-card">

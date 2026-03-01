@@ -31,11 +31,11 @@ export function PromptCodeBlock({ content, className }: PromptCodeBlockProps) {
   }
 
   return (
-    <div className="relative min-w-0 group">
+    <div className="relative w-full min-w-0 max-w-full overflow-hidden group">
       <button
         type="button"
         onClick={handleCopy}
-        className="absolute right-2 top-2 rounded-md p-2 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring group-hover:opacity-100"
+        className="absolute right-2 top-2 z-10 rounded-md p-2 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring group-hover:opacity-100"
         aria-label={copied ? "Copied!" : "Copy to clipboard"}
       >
         {copied ? (
@@ -46,11 +46,11 @@ export function PromptCodeBlock({ content, className }: PromptCodeBlockProps) {
       </button>
       <pre
         className={cn(
-          "min-w-0 overflow-x-auto rounded-lg border border-border bg-muted/30 p-4 pr-12 font-mono text-sm text-muted-foreground",
+          "max-w-full overflow-x-auto overflow-y-auto rounded-lg border border-border bg-muted/30 p-4 pr-12 font-mono text-sm text-muted-foreground whitespace-pre-wrap break-words",
           className
         )}
       >
-        <code>{content}</code>
+        <code className="break-words">{content}</code>
       </pre>
     </div>
   );
