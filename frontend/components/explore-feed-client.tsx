@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PromptCard } from "@/components/prompt-library";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth-provider";
@@ -27,6 +27,8 @@ function toPromptCard(api: ApiPrompt): PromptCardData {
   };
 }
 
+const PROMPT_POLL_INTERVAL_MS = 60_000;
+
 type ExploreFeedClientProps = {
   initialPrompts: PromptCardData[];
 };
@@ -35,13 +37,59 @@ export function ExploreFeedClient({ initialPrompts }: ExploreFeedClientProps) {
   const { user } = useAuth();
   const [mode, setMode] = useState<"all" | "following">("all");
   const [loading, setLoading] = useState(false);
+  const [explorePrompts, setExplorePrompts] = useState<PromptCardData[]>(initialPrompts);
   const [followingPrompts, setFollowingPrompts] = useState<PromptCardData[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setExplorePrompts(initialPrompts);
+  }, [initialPrompts]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refetchAll() {
+      const res = await fetchPrompts({ sort: "createdAt", limit: 30 });
+      if (cancelled) return;
+      if (res.success) setExplorePrompts(res.prompts.map(toPromptCard));
+    }
+
+    async function refetchFollowing() {
+      if (!user) return;
+      const token = await user.getIdToken();
+      const following = await fetchMyFollowingUids(token);
+      if (cancelled || !following.success) return;
+      if (!following.followingUids.length) {
+        setFollowingPrompts([]);
+        return;
+      }
+      const res = await fetchPrompts({
+        authorUids: following.followingUids,
+        sort: "createdAt",
+        limit: 50,
+      });
+      if (cancelled) return;
+      setFollowingPrompts(res.success ? res.prompts.map(toPromptCard) : []);
+    }
+
+    const refetch = mode === "all" ? refetchAll : refetchFollowing;
+    void refetch();
+    const interval = setInterval(() => void refetch(), PROMPT_POLL_INTERVAL_MS);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") void refetch();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [mode, user]);
+
   const prompts = useMemo(() => {
     if (mode === "following") return followingPrompts ?? [];
-    return initialPrompts;
-  }, [mode, followingPrompts, initialPrompts]);
+    return explorePrompts;
+  }, [mode, followingPrompts, explorePrompts]);
 
   async function handleShowFollowing() {
     setMode("following");

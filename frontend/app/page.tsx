@@ -92,41 +92,41 @@ export default async function ExplorePage() {
   );
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="mx-auto flex h-full max-w-7xl flex-1 flex-col gap-8 overflow-hidden px-4 py-8 sm:px-6 lg:grid lg:grid-cols-[280px_1fr_280px] lg:items-start">
-          {/* Left: Trending Developers */}
-          <aside className="order-2 shrink-0 lg:order-1">
-            <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-              <Users className="size-5 text-blue-500/90" />
-              Trending Developers
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="mx-auto flex min-h-0 max-w-7xl flex-1 flex-col gap-6 overflow-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] lg:items-start lg:gap-8">
+          {/* Left: Trending Developers - desktop first column, mobile after prompts */}
+          <aside className="order-2 min-w-0 shrink-0 lg:order-1">
+            <h2 className="mb-3 flex items-center gap-2 text-base font-semibold sm:mb-4 sm:text-lg">
+              <Users className="size-5 shrink-0 text-blue-500/90" />
+              <span className="truncate">Trending Developers</span>
             </h2>
-            <div className="flex flex-col border rounded-lg bg-card">
+            <div className="flex flex-col rounded-lg border border-border bg-card">
               {trendingDevelopersWithProfile.map((dev) => (
                 <TrendingDeveloperCard key={dev.username} dev={dev} />
               ))}
             </div>
           </aside>
 
-          {/* Middle: Main prompts */}
-          <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto lg:order-2 lg:min-w-[min(40vw,640px)]">
+          {/* Middle: Main prompts - primary content, scrolls */}
+          <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto lg:order-2">
             <ExploreFeedClient initialPrompts={newestPrompts} />
           </main>
 
           {/* Right: Trending Prompts */}
-          <aside className="order-3 shrink-0">
-            <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-              <TrendingUp className="size-5 text-amber-500/90" />
-              Trending Prompts
+          <aside className="order-3 min-w-0 shrink-0">
+            <h2 className="mb-3 flex items-center gap-2 text-base font-semibold sm:mb-4 sm:text-lg">
+              <TrendingUp className="size-5 shrink-0 text-amber-500/90" />
+              <span className="truncate">Trending Prompts</span>
             </h2>
-            <div className="flex flex-col gap-3">
+            <div className="flex min-w-0 flex-col gap-3">
               {trendingPrompts.map((prompt) => (
                 <Link
                   key={prompt.id}
                   href={`/prompts/${prompt.id}`}
-                  className="group flex flex-col gap-2 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50"
+                  className="group flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50 sm:p-4"
                 >
-                  <p className="font-medium truncate">{prompt.title}</p>
-                  <p className="line-clamp-2 text-sm text-muted-foreground">
+                  <p className="truncate font-medium">{prompt.title}</p>
+                  <p className="line-clamp-2 min-w-0 text-sm text-muted-foreground">
                     {prompt.description}
                   </p>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">

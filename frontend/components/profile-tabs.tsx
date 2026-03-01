@@ -268,14 +268,14 @@ export function ProfileTabs({
       </div>
       {isPinsModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-lg border border-border bg-background shadow-lg">
+          <div className="w-full max-w-2xl overflow-hidden rounded-lg border border-border bg-background shadow-lg">
             <div className="flex items-center justify-between border-b border-border p-4">
               <h3 className="text-base font-semibold">Edit pinned prompts</h3>
               <p className="text-xs text-muted-foreground">
                 {draftPinnedIds.length}/{MAX_PINNED} selected
               </p>
             </div>
-            <div className="max-h-[55vh] overflow-y-auto p-4">
+            <div className="max-h-[55dvh] overflow-y-auto p-4">
               {allPrompts.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No prompts yet.</p>
               ) : (

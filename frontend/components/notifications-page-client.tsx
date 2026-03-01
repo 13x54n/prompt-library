@@ -79,8 +79,17 @@ export function NotificationsPageClient() {
     }
 
     load();
+    const interval = setInterval(load, 25_000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [user]);
 

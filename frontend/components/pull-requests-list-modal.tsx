@@ -51,7 +51,7 @@ export function PullRequestsListModal({
         aria-hidden
       />
 
-      <div className="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border border-border bg-background shadow-lg">
+      <div className="relative z-10 flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg">
         <div className="flex items-center justify-between border-b border-border p-4">
           <h2
             id="pr-list-modal-title"

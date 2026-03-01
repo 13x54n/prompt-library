@@ -293,7 +293,7 @@ export function PullRequestModal({
       />
 
       {/* Modal content */}
-      <div className="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col rounded-lg border border-border bg-background shadow-lg">
+      <div className="relative z-10 flex max-h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-border p-4">
           <div className="min-w-0 flex-1">

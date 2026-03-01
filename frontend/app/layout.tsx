@@ -61,10 +61,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <div className="flex min-h-screen flex-col">
+          <div className="flex min-h-screen flex-col overflow-x-hidden supports-[height:100dvh]:min-h-dvh">
             <header className="sticky top-0 z-50 shrink-0 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6" aria-label="Main">
-                <div className="flex shrink-0 items-center gap-6">
+              <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6" aria-label="Main">
+                <div className="flex min-w-0 shrink-0 items-center gap-4 sm:gap-6">
                   <Link
                     href="/"
                     className="font-semibold hover:text-muted-foreground flex items-center gap-2"
@@ -88,8 +88,8 @@ export default function RootLayout({
                   </div> */}
                 </div>
 
-                <div className="flex flex-1 items-center justify-end gap-2">
-                  <div className="hidden w-1/3 min-w-0 sm:block">
+                <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                  <div className="hidden min-w-0 flex-1 sm:block sm:max-w-xs">
                     <SearchBar />
                   </div>
                   <UserMenu />

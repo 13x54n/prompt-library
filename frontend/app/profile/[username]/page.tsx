@@ -147,9 +147,9 @@ export default async function ProfilePage({
     : { createdPrompts: [], prsByPrompt: [], discussionQuestions: [], answersByPrompt: [] };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
+    <div className="min-h-0 flex-1 bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+        <div className="grid min-w-0 gap-6 sm:gap-8 lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)]">
           <ProfileCard profileUser={profileUser} handle={handle} />
 
           {/* Right: Tabs */}

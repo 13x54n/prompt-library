@@ -211,7 +211,12 @@
   *::-webkit-scrollbar {
     display: none;
   }
+  html {
+    overflow-x: hidden;
+  }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+    min-height: 100dvh;
   }
 }

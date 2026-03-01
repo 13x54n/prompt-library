@@ -130,10 +130,10 @@ export default async function PromptDetailPage({
   );
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] min-h-0 flex-col overflow-hidden bg-background">
-      <div className="mx-auto flex h-full min-h-0 max-w-6xl flex-1 flex-col gap-8 overflow-hidden px-4 py-8 sm:px-6 lg:grid lg:grid-cols-[200px_1fr_240px] lg:grid-rows-[1fr] lg:items-stretch">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
+      <div className="mx-auto flex min-h-0 max-w-6xl flex-1 flex-col gap-6 overflow-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-8 lg:grid lg:grid-cols-[minmax(0,200px)_minmax(0,1fr)_minmax(0,240px)] lg:items-stretch lg:gap-8">
           {/* Left sidebar: Pull requests - fixed, does not scroll */}
-          <div className="order-2 shrink-0 self-start lg:order-1">
+          <div className="order-2 min-w-0 shrink-0 self-start lg:order-1">
             <PullRequestsSidebar
               promptId={id}
               pullRequests={pullRequests}
@@ -141,7 +141,7 @@ export default async function PromptDetailPage({
           </div>
 
           {/* Main content - only this scrolls */}
-          <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto lg:order-2 sm:min-w-[min(100%,360px)] lg:min-w-[min(40vw,640px)]">
+          <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto lg:order-2">
             {/* Overview */}
             <div id="overview" className="scroll-mt-8 space-y-8">
               <PromptHeader
@@ -170,7 +170,7 @@ export default async function PromptDetailPage({
           </main>
 
           {/* Right sidebar: Contributors & Insights - fixed, does not scroll */}
-          <aside className="order-3 shrink-0 self-start space-y-6 lg:sticky lg:top-0">
+          <aside className="order-3 min-w-0 shrink-0 self-start space-y-6 lg:sticky lg:top-8">
             
             <div>
               <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">

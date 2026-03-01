@@ -64,7 +64,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] px-4"
+      className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto px-3 pb-6 pt-[10vh] sm:px-4 sm:pt-[15vh]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="search-modal-title"
@@ -75,8 +75,8 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
         aria-hidden
       />
 
-      <div className="relative z-10 flex w-full max-w-4xl flex-col rounded-lg border border-border bg-background shadow-lg">
-        <div className="flex items-center gap-2 border-b border-border p-3">
+      <div className="relative z-10 flex max-h-[85dvh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg">
+        <div className="flex shrink-0 items-center gap-2 border-b border-border p-3">
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <Input
             ref={inputRef}
@@ -99,7 +99,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
           </Button>
         </div>
 
-        <div className="grid max-h-[60vh] overflow-y-auto sm:grid-cols-3">
+        <div className="grid min-h-0 flex-1 overflow-y-auto sm:grid-cols-3">
           {/* Left: Users */}
           <div className="border-b sm:border-b-0 sm:border-r border-border">
             <div className="sticky top-0 flex items-center gap-2 border-b border-border bg-muted/30 px-4 py-2">
@@ -194,7 +194,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                       {d.matchedAnswerSnippet ?? d.body}
                     </p>
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="truncate max-w-[120px]">{d.promptTitle}</span>
+                      <span className="min-w-0 truncate sm:max-w-[120px]">{d.promptTitle}</span>
                       <span>@{d.author}</span>
                       <span>{d.votes} votes</span>
                       <span>{d.answerCount} answers</span>

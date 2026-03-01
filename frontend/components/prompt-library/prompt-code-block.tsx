@@ -31,7 +31,7 @@ export function PromptCodeBlock({ content, className }: PromptCodeBlockProps) {
   }
 
   return (
-    <div className="relative group">
+    <div className="relative min-w-0 group">
       <button
         type="button"
         onClick={handleCopy}
@@ -46,7 +46,7 @@ export function PromptCodeBlock({ content, className }: PromptCodeBlockProps) {
       </button>
       <pre
         className={cn(
-          "overflow-x-auto rounded-lg border border-border bg-muted/30 p-4 pr-12 font-mono text-sm text-muted-foreground",
+          "min-w-0 overflow-x-auto rounded-lg border border-border bg-muted/30 p-4 pr-12 font-mono text-sm text-muted-foreground",
           className
         )}
       >

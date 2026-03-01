@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -51,9 +51,13 @@ const notificationTypeIcons: Record<ApiNotification["type"], React.ComponentType
   user_followed: UserPlus,
 };
 
+const NOTIFICATION_POLL_INTERVAL_MS = 25_000;
+
 function NotificationDropdown({ user }: { user: { getIdToken: () => Promise<string> } | null }) {
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const loadRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     let cancelled = false;
@@ -76,20 +80,34 @@ function NotificationDropdown({ user }: { user: { getIdToken: () => Promise<stri
       setUnreadCount(countRes.success ? countRes.unreadCount : 0);
     }
 
+    loadRef.current = loadNotifications;
     loadNotifications();
     const unsubscribe = onUnreadNotificationCountUpdated((nextUnreadCount) => {
       if (cancelled) return;
       setUnreadCount(nextUnreadCount);
     });
 
+    const interval = setInterval(loadNotifications, NOTIFICATION_POLL_INTERVAL_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") void loadNotifications();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       cancelled = true;
       unsubscribe();
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [user]);
 
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) void loadRef.current?.();
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative size-8 border border-border" aria-label="Notifications">
           <Bell className="size-4" />

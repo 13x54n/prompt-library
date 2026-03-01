@@ -11,10 +11,10 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <div className="grid min-h-[calc(100vh-5rem)] lg:grid-cols-2">
-      <div className="flex flex-col gap-4 p-6 md:p-10">
-        <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-xs">
+    <div className="grid min-h-[calc(100dvh-5rem)] min-w-0 lg:grid-cols-2">
+      <div className="flex min-w-0 flex-col gap-4 p-6 md:p-10">
+        <div className="flex min-w-0 flex-1 items-center justify-center">
+          <div className="w-full min-w-0 max-w-xs">
             <LoginForm />
           </div>
         </div>

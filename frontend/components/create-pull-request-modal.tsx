@@ -71,7 +71,7 @@ export function CreatePullRequestModal({
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg">
+      <div className="relative z-10 flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg">
         <div className="flex items-center justify-between border-b border-border p-4">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
             <GitPullRequest className="size-5" />

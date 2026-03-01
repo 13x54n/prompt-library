@@ -137,7 +137,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
         onKeyDown={(e) => e.key === "Escape" && onClose()}
       />
       <div
-        className="relative z-10 w-full max-w-md rounded-lg border border-border bg-background p-6 shadow-lg"
+        className="relative z-10 w-full max-w-md overflow-hidden rounded-lg border border-border bg-background p-4 shadow-lg sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-6 flex items-center justify-between">
