@@ -7,7 +7,8 @@ import { SearchBar } from "@/components/search-bar";
 import { Footer } from "@/components/footer";
 import "./globals.css";
 import { GalleryVerticalEnd } from "lucide-react";
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/next";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -103,6 +104,7 @@ export default function RootLayout({
           </div>
         </AuthProvider>
         <Analytics />
+        <GoogleAnalytics />
       </body>
     </html>
   );

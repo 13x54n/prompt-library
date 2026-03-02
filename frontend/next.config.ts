@@ -22,9 +22,9 @@ const nextConfig: NextConfig = {
       "form-action 'self'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://accounts.google.com https://www.gstatic.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://accounts.google.com https://www.gstatic.com https://www.googletagmanager.com",
       "style-src 'self' 'unsafe-inline'",
-      "connect-src 'self' https: http:",
+      "connect-src 'self' https: http: https://www.google-analytics.com https://www.googletagmanager.com",
       "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com",
       "frame-ancestors 'none'",
     ].join("; ");
