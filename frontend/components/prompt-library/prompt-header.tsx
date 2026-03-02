@@ -106,6 +106,8 @@ export function PromptHeader({
       const token = await user.getIdToken();
       const result = await forkPrompt(token, promptId, authorUsername);
       if (result.success && result.prompt?.id) {
+        const { emitExploreInvalidate } = await import("@/lib/explore-sync");
+        emitExploreInvalidate();
         router.push(`/prompts/${result.prompt.id}`);
       }
     } finally {

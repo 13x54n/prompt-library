@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
 import { UserMenu } from "@/components/user-menu";
 import { SearchBar } from "@/components/search-bar";
+import { Footer } from "@/components/footer";
 import "./globals.css";
 import { GalleryVerticalEnd } from "lucide-react";
 
@@ -97,6 +98,7 @@ export default function RootLayout({
               </nav>
             </header>
             <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+            <Footer />
           </div>
         </AuthProvider>
       </body>

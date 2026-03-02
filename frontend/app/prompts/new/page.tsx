@@ -58,6 +58,8 @@ export default function CreatePromptPage() {
       });
 
       if (result.success && result.prompt?.id) {
+        const { emitExploreInvalidate } = await import("@/lib/explore-sync");
+        emitExploreInvalidate();
         router.push(`/prompts/${result.prompt.id}`);
       } else {
         setError(result.success ? "Something went wrong." : result.error);

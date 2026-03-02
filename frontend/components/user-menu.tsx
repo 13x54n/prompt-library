@@ -51,7 +51,7 @@ const notificationTypeIcons: Record<ApiNotification["type"], React.ComponentType
   user_followed: UserPlus,
 };
 
-const NOTIFICATION_POLL_INTERVAL_MS = 25_000;
+const NOTIFICATION_POLL_INTERVAL_MS = 15_000;
 
 function NotificationDropdown({ user }: { user: { getIdToken: () => Promise<string> } | null }) {
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);

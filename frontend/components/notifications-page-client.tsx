@@ -79,7 +79,7 @@ export function NotificationsPageClient() {
     }
 
     load();
-    const interval = setInterval(load, 25_000);
+    const interval = setInterval(load, 15_000);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") void load();

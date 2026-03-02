@@ -3,7 +3,7 @@ import Link from "next/link";
 import { TrendingUp, Users } from "lucide-react";
 import { TrendingDeveloperCard } from "@/components/trending-developer-card";
 import { ExploreFeedClient } from "@/components/explore-feed-client";
-import { fetchProfile, fetchPrompts, type ApiPrompt } from "@/lib/api";
+import { fetchProfile, fetchPromptById, fetchPrompts, type ApiPrompt } from "@/lib/api";
 import type { Prompt, TrendingDeveloper } from "@/lib/types";
 import { formatRelative } from "@/lib/utils";
 
@@ -13,10 +13,26 @@ export const metadata: Metadata = {
     "Browse trending AI prompts and developers. Discover prompts for Next.js, React, TypeScript, and more. Fork, upvote, and contribute to the community.",
 };
 
-function toPromptCard(api: ApiPrompt): Pick<
+type PromptCardData = Pick<
   Prompt,
-  "id" | "title" | "description" | "tags" | "stats" | "lastUpdated" | "username" | "authorUid" | "parentPromptId"
-> {
+  | "id"
+  | "title"
+  | "description"
+  | "tags"
+  | "stats"
+  | "lastUpdated"
+  | "username"
+  | "authorUid"
+  | "parentPromptId"
+  | "parentPromptTitle"
+  | "parentPromptUsername"
+  | "parentPromptAuthorUid"
+>;
+
+function toPromptCard(
+  api: ApiPrompt,
+  parentMeta?: { title: string; username: string; authorUid: string | null } | null
+): PromptCardData {
   return {
     id: api.id,
     title: api.title,
@@ -27,17 +43,57 @@ function toPromptCard(api: ApiPrompt): Pick<
     username: api.username,
     authorUid: api.authorUid,
     parentPromptId: api.parentPromptId ?? null,
+    parentPromptTitle: parentMeta?.title ?? null,
+    parentPromptUsername: parentMeta?.username ?? null,
+    parentPromptAuthorUid: parentMeta?.authorUid ?? null,
   };
 }
 
+const EXPLORE_PAGE_SIZE = 15;
+
 export default async function ExplorePage() {
   const [newestRes, poolRes] = await Promise.all([
-    fetchPrompts({ sort: "createdAt", limit: 30 }),
+    fetchPrompts({ sort: "createdAt", limit: EXPLORE_PAGE_SIZE, offset: 0 }),
     fetchPrompts({ sort: "upvotes", limit: 100 }),
   ]);
 
-  const newestPrompts = newestRes.success ? newestRes.prompts.map(toPromptCard) : [];
   const rankingPool = poolRes.success ? poolRes.prompts : newestRes.success ? newestRes.prompts : [];
+
+  const parentPromptMetaById = new Map<string, { title: string; username: string; authorUid: string | null }>();
+  const allPromptsForEnrichment = [
+    ...(newestRes.success ? newestRes.prompts : []),
+    ...rankingPool,
+  ];
+  const parentIds = [
+    ...new Set(
+      allPromptsForEnrichment
+        .map((p) => p.parentPromptId)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const parentResults = await Promise.all(
+    parentIds.map(async (parentId) => {
+      const result = await fetchPromptById(parentId).catch(() => ({ success: false as const, error: "Failed" }));
+      return { parentId, result };
+    })
+  );
+  for (const { parentId, result } of parentResults) {
+    if (result.success && result.prompt) {
+      parentPromptMetaById.set(parentId, {
+        title: result.prompt.title,
+        username: result.prompt.username,
+        authorUid: result.prompt.authorUid ?? null,
+      });
+    }
+  }
+
+  const newestPrompts: PromptCardData[] = newestRes.success
+    ? newestRes.prompts.map((p) => {
+        const parentMeta = p.parentPromptId ? parentPromptMetaById.get(p.parentPromptId) : null;
+        return toPromptCard(p, parentMeta ?? undefined);
+      })
+    : [];
+  const newestTotal = newestRes.success ? newestRes.total : 0;
 
   const trendingPrompts = [...rankingPool]
     .sort((a, b) => {
@@ -45,8 +101,11 @@ export default async function ExplorePage() {
       const bScore = (b.stats?.interactions ?? 0) + (b.stats?.upvotes ?? 0);
       return bScore - aScore;
     })
-    .slice(0, 10)
-    .map(toPromptCard);
+    .slice(0, 5)
+    .map((p) => {
+      const parentMeta = p.parentPromptId ? parentPromptMetaById.get(p.parentPromptId) : null;
+      return toPromptCard(p, parentMeta ?? undefined);
+    });
 
   const devMap = new Map<string, TrendingDeveloper>();
   for (const p of rankingPool) {
@@ -74,7 +133,7 @@ export default async function ExplorePage() {
       const bScore = b.totalUpvotes + b.totalForks + (b.totalActivity ?? 0);
       return bScore - aScore;
     })
-    .slice(0, 10);
+    .slice(0, 5);
 
   const trendingDevelopersWithProfile = await Promise.all(
     trendingDevelopers.map(async (dev) => {
@@ -105,11 +164,17 @@ export default async function ExplorePage() {
                 <TrendingDeveloperCard key={dev.username} dev={dev} />
               ))}
             </div>
+            <Link
+              href="/explore/trending?tab=developers"
+              className="mt-2 block text-center text-sm text-muted-foreground hover:text-foreground"
+            >
+              See all
+            </Link>
           </aside>
 
           {/* Middle: Main prompts - primary content, scrolls */}
           <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto lg:order-2">
-            <ExploreFeedClient initialPrompts={newestPrompts} />
+            <ExploreFeedClient initialPrompts={newestPrompts} initialTotal={newestTotal} />
           </main>
 
           {/* Right: Trending Prompts */}
@@ -136,6 +201,12 @@ export default async function ExplorePage() {
                 </Link>
               ))}
             </div>
+            <Link
+              href="/explore/trending?tab=prompts"
+              className="mt-2 block text-center text-sm text-muted-foreground hover:text-foreground"
+            >
+              See all
+            </Link>
           </aside>
         </div>
       </div>
