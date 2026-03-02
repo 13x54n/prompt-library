@@ -16,6 +16,7 @@ import { signOut } from "@/lib/auth";
 import {
   fetchNotifications,
   fetchUnreadNotificationCount,
+  markAllNotificationsRead,
   markNotificationRead,
   type ApiNotification,
 } from "@/lib/api";
@@ -56,6 +57,7 @@ const NOTIFICATION_POLL_INTERVAL_MS = 15_000;
 function NotificationDropdown({ user }: { user: { getIdToken: () => Promise<string> } | null }) {
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [markingAll, setMarkingAll] = useState(false);
 
   const loadRef = useRef<() => void>(() => {});
 
@@ -156,6 +158,30 @@ function NotificationDropdown({ user }: { user: { getIdToken: () => Promise<stri
               </Link>
             </DropdownMenuItem>
           ))
+        )}
+        {notifications.some((n) => !n.read) && (
+          <DropdownMenuItem
+            disabled={markingAll}
+            onClick={async () => {
+              if (!user) return;
+              setMarkingAll(true);
+              try {
+                const token = await user.getIdToken();
+                const result = await markAllNotificationsRead(token);
+                if (result.success) {
+                  setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+                  setUnreadCount(0);
+                  emitUnreadNotificationCount(0);
+                }
+              } finally {
+                setMarkingAll(false);
+              }
+            }}
+            className="flex items-center justify-center gap-2"
+          >
+            <Bell className="size-4" />
+            {markingAll ? "Marking..." : "Mark all as read"}
+          </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>

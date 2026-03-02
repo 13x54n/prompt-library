@@ -73,9 +73,13 @@ router.get("/", optionalAuth, async (req, res) => {
     }
 
     if (tags) {
-      const tagList = Array.isArray(tags) ? tags : tags.split(",").map((t) => t.trim());
+      const tagList = Array.isArray(tags) ? tags : tags.split(",").map((t) => t.trim()).filter(Boolean);
       if (tagList.length > 0) {
-        andClauses.push({ tags: { $in: tagList } });
+        const tagConditions = tagList.map((t) => {
+          const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          return { tags: { $elemMatch: { $regex: new RegExp(`^${escaped}$`, "i") } } };
+        });
+        andClauses.push(tagConditions.length === 1 ? tagConditions[0] : { $or: tagConditions });
       }
     }
 
@@ -113,6 +117,35 @@ router.get("/", optionalAuth, async (req, res) => {
   } catch (err) {
     console.error("[prompt-service] GET /prompts error:", err);
     res.status(500).json({ success: false, error: err.message ?? "Failed to list prompts" });
+  }
+});
+
+/**
+ * GET /api/prompts/tags/popular
+ * Returns most used tags across the database by appearance count.
+ */
+router.get("/tags/popular", optionalAuth, async (req, res) => {
+  try {
+    const viewerUid = req.uid ?? null;
+    const limit = Math.min(Number(req.query.limit) || 10, 50);
+    const visibilityFilter = visibilityFilterFor(viewerUid);
+
+    const results = await Prompt.aggregate([
+      { $match: visibilityFilter },
+      { $unwind: "$tags" },
+      { $match: { tags: { $exists: true, $ne: "", $type: "string" } } },
+      { $group: { _id: { $toLower: "$tags" }, count: { $sum: 1 } } },
+      { $match: { _id: { $ne: "" } } },
+      { $sort: { count: -1 } },
+      { $limit: limit },
+      { $project: { tag: "$_id", count: 1, _id: 0 } },
+    ]);
+
+    const tags = results.map((r) => r.tag);
+    res.json({ success: true, tags });
+  } catch (err) {
+    console.error("[prompt-service] GET /tags/popular error:", err);
+    res.status(500).json({ success: false, error: "Failed to fetch popular tags" });
   }
 });
 
@@ -632,6 +665,13 @@ router.post("/:id/fork", requireAuth, async (req, res) => {
         error: "You can only fork prompts created by other users",
       });
     }
+    const existingFork = await Prompt.findOne({ parentPromptId: id, authorUid: uid });
+    if (existingFork) {
+      return res.status(400).json({
+        success: false,
+        error: "You have already forked this prompt",
+      });
+    }
     const username = (authorUsername ?? "").toString().trim().toLowerCase();
     if (!username || !/^[a-z0-9_-]{3,30}$/.test(username)) {
       return res.status(400).json({
@@ -789,10 +829,22 @@ router.post("/", requireAuth, async (req, res) => {
       });
     }
 
+    const titleTrimmed = String(title).trim();
+    const existingTitle = await Prompt.findOne({
+      authorUid: uid,
+      title: { $regex: new RegExp(`^${titleTrimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
+    });
+    if (existingTitle) {
+      return res.status(400).json({
+        success: false,
+        error: "You already have a prompt with this title",
+      });
+    }
+
     const prompt = await Prompt.create({
       authorUid: uid,
       authorUsername: username,
-      title: String(title).trim(),
+      title: titleTrimmed,
       description: typeof description === "string" ? description.trim() : "",
       tags: Array.isArray(tags) ? tags.filter((t) => typeof t === "string").map((t) => t.trim()) : [],
       primaryPrompt: String(primaryPrompt).trim(),

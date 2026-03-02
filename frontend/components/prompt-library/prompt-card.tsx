@@ -67,7 +67,7 @@ export function PromptCard({ prompt, className }: PromptCardProps) {
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {prompt.tags.map((tag) => (
-            <TagChip key={tag} tag={tag} href={`/explore?tag=${tag}`} />
+            <TagChip key={tag} tag={tag} href={`/?tag=${encodeURIComponent(tag)}`} />
           ))}
         </div>
         {/* contributor */}

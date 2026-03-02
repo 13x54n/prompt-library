@@ -144,6 +144,22 @@ export async function fetchPromptsByAuthorUid(
   }
 }
 
+export async function fetchPopularTags(
+  limit = 10
+): Promise<{ success: true; tags: string[] } | { success: false; error: string }> {
+  try {
+    const res = await fetch(
+      `${PROMPT_SERVICE_URL}/api/prompts/tags/popular?limit=${Math.min(limit, 50)}`,
+      { next: { revalidate: 60 } }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { success: false, error: data?.error ?? "Failed to fetch tags" };
+    return { success: true, tags: Array.isArray(data.tags) ? data.tags : [] };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "fetch failed" };
+  }
+}
+
 export async function fetchPrompts(params?: {
   author?: string;
   authorUids?: string[];

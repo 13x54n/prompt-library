@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { PromptCard } from "@/components/prompt-library";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth-provider";
@@ -8,7 +9,7 @@ import { fetchMyFollowingUids, fetchPromptById, fetchPrompts, type ApiPrompt } f
 import { onExploreInvalidate } from "@/lib/explore-sync";
 import { formatRelative } from "@/lib/utils";
 import type { Prompt } from "@/lib/types";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 type PromptCardData = Pick<
   Prompt,
@@ -68,15 +69,18 @@ async function enrichPromptsWithParent(apis: ApiPrompt[]): Promise<PromptCardDat
 }
 
 const PROMPT_POLL_INTERVAL_MS = 20_000;
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 20;
 
 type ExploreFeedClientProps = {
   initialPrompts: PromptCardData[];
   initialTotal?: number;
+  initialTag?: string;
 };
 
-export function ExploreFeedClient({ initialPrompts, initialTotal = 0 }: ExploreFeedClientProps) {
+export function ExploreFeedClient({ initialPrompts, initialTotal = 0, initialTag }: ExploreFeedClientProps) {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const tag = searchParams.get("tag") ?? initialTag ?? undefined;
   const [mode, setMode] = useState<"all" | "following">("all");
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -92,11 +96,12 @@ export function ExploreFeedClient({ initialPrompts, initialTotal = 0 }: ExploreF
   }, [initialPrompts, initialTotal]);
 
   const refetchAll = useCallback(
-    async (pageNum: number, cancelled: { current: boolean }) => {
+    async (pageNum: number, tagFilter: string | undefined, cancelled: { current: boolean }) => {
       const res = await fetchPrompts({
         sort: "createdAt",
         limit: PAGE_SIZE,
         offset: (pageNum - 1) * PAGE_SIZE,
+        ...(tagFilter && { tags: tagFilter }),
       });
       if (cancelled.current) return;
       if (res.success) {
@@ -140,7 +145,7 @@ export function ExploreFeedClient({ initialPrompts, initialTotal = 0 }: ExploreF
   useEffect(() => {
     const cancelled = { current: false };
     const doRefetch = () => {
-      if (mode === "all") void refetchAll(page, cancelled);
+      if (mode === "all") void refetchAll(page, tag, cancelled);
       else void refetchFollowing(cancelled);
     };
     doRefetch();
@@ -156,7 +161,7 @@ export function ExploreFeedClient({ initialPrompts, initialTotal = 0 }: ExploreF
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       unsubscribe();
     };
-  }, [mode, page, refetchAll, refetchFollowing]);
+  }, [mode, page, tag, refetchAll, refetchFollowing]);
 
   const prompts = useMemo(() => {
     if (mode === "following") return followingPrompts ?? [];
@@ -206,7 +211,7 @@ export function ExploreFeedClient({ initialPrompts, initialTotal = 0 }: ExploreF
 
   return (
     <div className="rounded-lg border border-border bg-card">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
         <Button
           size="sm"
           variant={mode === "all" ? "default" : "outline"}
@@ -221,6 +226,15 @@ export function ExploreFeedClient({ initialPrompts, initialTotal = 0 }: ExploreF
         >
           Following
         </Button>
+        {tag && mode === "all" && (
+          <a
+            href="/"
+            className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            #{tag}
+            <X className="size-3.5" />
+          </a>
+        )}
       </div>
       {error && (
         <p className="px-4 pt-3 text-sm text-destructive">{error}</p>

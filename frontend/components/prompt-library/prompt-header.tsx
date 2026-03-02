@@ -49,6 +49,7 @@ export function PromptHeader({
   const [upvoted, setUpvoted] = useState(false);
   const [upvoteLoading, setUpvoteLoading] = useState(false);
   const [forkLoading, setForkLoading] = useState(false);
+  const [forkError, setForkError] = useState<string | null>(null);
   const [isPinned, setIsPinned] = useState(initialPinned);
   const [pinLoading, setPinLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -102,6 +103,7 @@ export function PromptHeader({
       return;
     }
     setForkLoading(true);
+    setForkError(null);
     try {
       const token = await user.getIdToken();
       const result = await forkPrompt(token, promptId, authorUsername);
@@ -109,6 +111,8 @@ export function PromptHeader({
         const { emitExploreInvalidate } = await import("@/lib/explore-sync");
         emitExploreInvalidate();
         router.push(`/prompts/${result.prompt.id}`);
+      } else if (!result.success && result.error) {
+        setForkError(result.error);
       }
     } finally {
       setForkLoading(false);
@@ -224,16 +228,21 @@ export function PromptHeader({
           </Button>
         )}
         {!isOwner && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1"
-            onClick={handleFork}
-            disabled={forkLoading}
-          >
-            <GitFork className="size-4" />
-            Fork
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1"
+              onClick={handleFork}
+              disabled={forkLoading}
+            >
+              <GitFork className="size-4" />
+              Fork
+            </Button>
+            {forkError && (
+              <span className="w-full text-xs text-destructive">{forkError}</span>
+            )}
+          </>
         )}
         {isOwner && (
           <Button

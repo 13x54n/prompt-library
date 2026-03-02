@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { TrendingUp, Users } from "lucide-react";
+import { TrendingUp, Users, Hash } from "lucide-react";
 import { TrendingDeveloperCard } from "@/components/trending-developer-card";
 import { ExploreFeedClient } from "@/components/explore-feed-client";
-import { fetchProfile, fetchPromptById, fetchPrompts, type ApiPrompt } from "@/lib/api";
+import { TagChip } from "@/components/prompt-library";
+import { fetchPopularTags, fetchProfile, fetchPromptById, fetchPrompts, type ApiPrompt } from "@/lib/api";
 import type { Prompt, TrendingDeveloper } from "@/lib/types";
 import { formatRelative } from "@/lib/utils";
 
@@ -49,12 +50,26 @@ function toPromptCard(
   };
 }
 
-const EXPLORE_PAGE_SIZE = 15;
+const EXPLORE_PAGE_SIZE = 20;
+const TRENDING_TOPICS_COUNT = 10;
 
-export default async function ExplorePage() {
-  const [newestRes, poolRes] = await Promise.all([
-    fetchPrompts({ sort: "createdAt", limit: EXPLORE_PAGE_SIZE, offset: 0 }),
+export default async function ExplorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tag?: string }>;
+}) {
+  const { tag: tagParam } = await searchParams;
+  const filterTag = typeof tagParam === "string" ? tagParam.trim() : undefined;
+
+  const [newestRes, poolRes, tagsRes] = await Promise.all([
+    fetchPrompts({
+      sort: "createdAt",
+      limit: EXPLORE_PAGE_SIZE,
+      offset: 0,
+      ...(filterTag && { tags: filterTag }),
+    }),
     fetchPrompts({ sort: "upvotes", limit: 100 }),
+    fetchPopularTags(TRENDING_TOPICS_COUNT),
   ]);
 
   const rankingPool = poolRes.success ? poolRes.prompts : newestRes.success ? newestRes.prompts : [];
@@ -150,6 +165,8 @@ export default async function ExplorePage() {
     })
   );
 
+  const trendingTopics = tagsRes.success ? tagsRes.tags : [];
+
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="mx-auto flex min-h-0 max-w-7xl flex-1 flex-col gap-6 overflow-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] lg:items-start lg:gap-8">
@@ -170,11 +187,30 @@ export default async function ExplorePage() {
             >
               See all
             </Link>
+
+            <h2 className="mb-3 mt-6 flex items-center gap-2 text-base font-semibold sm:mb-4 sm:text-lg">
+              <Hash className="size-5 shrink-0 text-emerald-500/90" />
+              <span className="truncate">Trending Topics</span>
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {trendingTopics.map((tag) => (
+                <TagChip
+                  key={tag}
+                  tag={tag}
+                  href={`/?tag=${encodeURIComponent(tag)}`}
+                  variant="subtle"
+                />
+              ))}
+            </div>
           </aside>
 
           {/* Middle: Main prompts - primary content, scrolls */}
           <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto lg:order-2">
-            <ExploreFeedClient initialPrompts={newestPrompts} initialTotal={newestTotal} />
+            <ExploreFeedClient
+              initialPrompts={newestPrompts}
+              initialTotal={newestTotal}
+              initialTag={filterTag}
+            />
           </main>
 
           {/* Right: Trending Prompts */}
