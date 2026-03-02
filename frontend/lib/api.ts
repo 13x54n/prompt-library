@@ -145,12 +145,16 @@ export async function fetchPromptsByAuthorUid(
 }
 
 export async function fetchPopularTags(
-  limit = 10
+  limit = 10,
+  search?: string
 ): Promise<{ success: true; tags: string[] } | { success: false; error: string }> {
   try {
+    const params = new URLSearchParams();
+    params.set("limit", String(Math.min(limit, 50)));
+    if (search?.trim()) params.set("q", search.trim());
     const res = await fetch(
-      `${PROMPT_SERVICE_URL}/api/prompts/tags/popular?limit=${Math.min(limit, 50)}`,
-      { next: { revalidate: 60 } }
+      `${PROMPT_SERVICE_URL}/api/prompts/tags/popular?${params.toString()}`,
+      search?.trim() ? { cache: "no-store" } : { next: { revalidate: 60 } }
     );
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { success: false, error: data?.error ?? "Failed to fetch tags" };
@@ -705,6 +709,8 @@ export type ApiPullRequest = ApiPullRequestSummary & {
   proposedTags?: string[];
   comments: ApiPullRequestComment[];
   commentTree?: ApiPullRequestComment[];
+  canMerge?: boolean;
+  canClose?: boolean;
 };
 
 export type ApiPullRequestComment = {

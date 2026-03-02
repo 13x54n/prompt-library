@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { TrendingUp, Users, Hash } from "lucide-react";
+import { TrendingUp, Users } from "lucide-react";
 import { TrendingDeveloperCard } from "@/components/trending-developer-card";
 import { ExploreFeedClient } from "@/components/explore-feed-client";
-import { TagChip } from "@/components/prompt-library";
+import { TrendingTopicsClient } from "@/components/trending-topics-client";
 import { fetchPopularTags, fetchProfile, fetchPromptById, fetchPrompts, type ApiPrompt } from "@/lib/api";
 import type { Prompt, TrendingDeveloper } from "@/lib/types";
 import { formatRelative } from "@/lib/utils";
@@ -188,20 +188,7 @@ export default async function ExplorePage({
               See all
             </Link>
 
-            <h2 className="mb-3 mt-6 flex items-center gap-2 text-base font-semibold sm:mb-4 sm:text-lg">
-              <Hash className="size-5 shrink-0 text-emerald-500/90" />
-              <span className="truncate">Trending Topics</span>
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {trendingTopics.map((tag) => (
-                <TagChip
-                  key={tag}
-                  tag={tag}
-                  href={`/?tag=${encodeURIComponent(tag)}`}
-                  variant="subtle"
-                />
-              ))}
-            </div>
+            <TrendingTopicsClient topics={trendingTopics} />
           </aside>
 
           {/* Middle: Main prompts - only this section scrolls on desktop */}

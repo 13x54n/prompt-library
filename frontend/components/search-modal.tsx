@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Search, X, Users, FileText, MessageSquare, ArrowUp } from "lucide-react";
+import { Search, X, Users, FileText, MessageSquare, ArrowUp, Hash } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
-import { fetchPrompts, searchDiscussions, searchUsers } from "@/lib/api";
+import { fetchPopularTags, fetchPrompts, searchDiscussions, searchUsers } from "@/lib/api";
 import type { SearchDiscussion, SearchUser } from "@/lib/api";
 import type { Prompt } from "@/lib/types";
 
@@ -23,6 +23,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
     Pick<Prompt, "id" | "title" | "description" | "tags" | "stats" | "lastUpdated" | "username">[]
   >([]);
   const [discussions, setDiscussions] = useState<SearchDiscussion[]>([]);
+  const [topics, setTopics] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const trimmedQuery = query.trim();
   const shouldSearch = open && trimmedQuery.length > 0;
@@ -46,15 +47,17 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
     if (!shouldSearch) return;
 
     const timer = setTimeout(async () => {
-      const [usersRes, promptsRes, discussionsRes] = await Promise.all([
+      const [usersRes, promptsRes, discussionsRes, tagsRes] = await Promise.all([
         searchUsers(trimmedQuery, 8),
         fetchPrompts({ q: trimmedQuery, sort: "createdAt", limit: 8 }),
         searchDiscussions(trimmedQuery, 8),
+        fetchPopularTags(15, trimmedQuery),
       ]);
 
       setUsers(usersRes.success ? usersRes.users : []);
       setPrompts(promptsRes.success ? promptsRes.prompts : []);
       setDiscussions(discussionsRes.success ? discussionsRes.discussions : []);
+      setTopics(tagsRes.success ? tagsRes.tags : []);
     }, 250);
 
     return () => clearTimeout(timer);
@@ -81,7 +84,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
           <Input
             ref={inputRef}
             type="search"
-            placeholder="Search users, prompts, discussions..."
+            placeholder="Search users, prompts, discussions, topics..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
@@ -99,7 +102,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
           </Button>
         </div>
 
-        <div className="grid min-h-0 flex-1 overflow-y-auto sm:grid-cols-3">
+        <div className="grid min-h-0 flex-1 overflow-y-auto sm:grid-cols-4">
           {/* Left: Users */}
           <div className="border-b sm:border-b-0 sm:border-r border-border">
             <div className="sticky top-0 flex items-center gap-2 border-b border-border bg-muted/30 px-4 py-2">
@@ -170,8 +173,8 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
             </div>
           </div>
 
-          {/* Right: Discussions */}
-          <div>
+          {/* Third: Discussions */}
+          <div className="border-b sm:border-b-0 sm:border-r border-border">
             <div className="sticky top-0 flex items-center gap-2 border-b border-border bg-muted/30 px-4 py-2">
               <MessageSquare className="size-4 text-muted-foreground" />
               <span className="text-sm font-medium">Discussions</span>
@@ -199,6 +202,32 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                       <span>{d.votes} votes</span>
                       <span>{d.answerCount} answers</span>
                     </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Fourth: Topics */}
+          <div>
+            <div className="sticky top-0 flex items-center gap-2 border-b border-border bg-muted/30 px-4 py-2">
+              <Hash className="size-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Topics</span>
+            </div>
+            <div className="flex flex-wrap gap-2 p-4">
+              {!shouldSearch || topics.length === 0 ? (
+                <p className="w-full py-4 text-center text-sm text-muted-foreground">
+                  No topics found
+                </p>
+              ) : (
+                topics.map((tag) => (
+                  <Link
+                    key={tag}
+                    href={`/?tag=${encodeURIComponent(tag)}`}
+                    onClick={onClose}
+                    className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
+                  >
+                    #{tag}
                   </Link>
                 ))
               )}

@@ -128,18 +128,25 @@ router.get("/tags/popular", optionalAuth, async (req, res) => {
   try {
     const viewerUid = req.uid ?? null;
     const limit = Math.min(Number(req.query.limit) || 10, 50);
+    const q = String(req.query.q ?? "").trim();
     const visibilityFilter = visibilityFilterFor(viewerUid);
 
-    const results = await Prompt.aggregate([
+    const pipeline = [
       { $match: visibilityFilter },
       { $unwind: "$tags" },
       { $match: { tags: { $exists: true, $ne: "", $type: "string" } } },
       { $group: { _id: { $toLower: "$tags" }, count: { $sum: 1 } } },
       { $match: { _id: { $ne: "" } } },
-      { $sort: { count: -1 } },
-      { $limit: limit },
-      { $project: { tag: "$_id", count: 1, _id: 0 } },
-    ]);
+    ];
+    if (q) {
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      pipeline.push({ $match: { _id: { $regex: escaped, $options: "i" } } });
+    }
+    pipeline.push({ $sort: { count: -1 } });
+    pipeline.push({ $limit: limit });
+    pipeline.push({ $project: { tag: "$_id", count: 1, _id: 0 } });
+
+    const results = await Prompt.aggregate(pipeline);
 
     const tags = results.map((r) => r.tag);
     res.json({ success: true, tags });

@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
-import { PromptCodeBlock } from "@/components/prompt-library";
 import { MarkdownEditor } from "@/components/prompt-library/markdown-editor";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth-provider";
@@ -24,6 +23,8 @@ import {
   addPullRequestComment,
   addPullRequestCommentReply,
   votePullRequestComment,
+  mergePullRequest,
+  closePullRequest,
   type ApiPullRequestComment,
   type ApiPullRequest,
 } from "@/lib/api";
@@ -33,6 +34,7 @@ type PullRequestModalProps = {
   prId: string;
   highlightedCommentId?: string;
   onClose: () => void;
+  onMergeOrClose?: () => void;
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -65,6 +67,7 @@ export function PullRequestModal({
   prId,
   highlightedCommentId,
   onClose,
+  onMergeOrClose,
 }: PullRequestModalProps) {
   const router = useRouter();
   const { user, currentUser } = useAuth();
@@ -72,6 +75,7 @@ export function PullRequestModal({
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
   const [postingComment, setPostingComment] = useState(false);
+  const [mergeCloseLoading, setMergeCloseLoading] = useState(false);
 
   useEffect(() => {
     fetchPullRequest(promptId, prId).then((result) => {
@@ -129,6 +133,44 @@ export function PullRequestModal({
       return true;
     } catch {
       return false;
+    }
+  }
+
+  async function handleMerge() {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    if (!pr?.canMerge) return;
+    setMergeCloseLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const result = await mergePullRequest(token, promptId, prId);
+      if (result.success && result.pullRequest) {
+        setPr(result.pullRequest);
+        onMergeOrClose?.();
+      }
+    } finally {
+      setMergeCloseLoading(false);
+    }
+  }
+
+  async function handleClose() {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    if (!pr?.canClose) return;
+    setMergeCloseLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const result = await closePullRequest(token, promptId, prId);
+      if (result.success && result.pullRequest) {
+        setPr(result.pullRequest);
+        onMergeOrClose?.();
+      }
+    } finally {
+      setMergeCloseLoading(false);
     }
   }
 
@@ -317,15 +359,37 @@ export function PullRequestModal({
               )}
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="shrink-0"
-            aria-label="Close"
-          >
-            <X className="size-5" />
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {pr.canMerge && (
+              <Button
+                onClick={() => void handleMerge()}
+                disabled={mergeCloseLoading}
+                className="gap-1 bg-green-600 hover:bg-green-700"
+              >
+                <GitMerge className="size-4" />
+                {mergeCloseLoading ? "Merging…" : "Merge"}
+              </Button>
+            )}
+            {pr.canClose && (
+              <Button
+                variant="outline"
+                onClick={() => void handleClose()}
+                disabled={mergeCloseLoading}
+                className="gap-1"
+              >
+                <X className="size-4" />
+                Close
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <X className="size-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Scrollable body */}
@@ -353,7 +417,30 @@ export function PullRequestModal({
                     <span className="font-medium">Changes</span>
                   </div>
                   <div className="p-4">
-                    <PromptCodeBlock content={pr.promptDiff} />
+                    <div className="overflow-x-auto rounded-lg border border-border bg-muted/30 font-mono text-sm">
+                      {pr.promptDiff.split("\n").map((line, i) => {
+                        const isRemoval = line.startsWith("-") && !line.startsWith("---");
+                        const isAddition = line.startsWith("+") && !line.startsWith("+++");
+                        const isChunk = line.startsWith("@@");
+                        return (
+                          <div
+                            key={i}
+                            className={cn(
+                              "whitespace-pre-wrap break-words border-l-2 pl-2",
+                              isRemoval &&
+                                "border-red-500/60 bg-red-500/10 text-red-700 dark:text-red-400",
+                              isAddition &&
+                                "border-green-500/60 bg-green-500/10 text-green-700 dark:text-green-400",
+                              isChunk && "border-blue-500/40 bg-blue-500/5 text-muted-foreground",
+                              !isRemoval && !isAddition && !isChunk &&
+                                "border-transparent text-muted-foreground"
+                            )}
+                          >
+                            {line || " "}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
