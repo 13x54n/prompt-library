@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GitPullRequest, X, GitMerge } from "lucide-react";
+import { GitPullRequest, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchPullRequests, type ApiPullRequestSummary } from "@/lib/api";
-import { cn } from "@/lib/utils";
 
 type PullRequestsListModalProps = {
   promptId: string;
@@ -19,11 +18,6 @@ export function PullRequestsListModal({
 }: PullRequestsListModalProps) {
   const [pullRequests, setPullRequests] = useState<ApiPullRequestSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"open" | "closed">("open");
-
-  const openPrs = pullRequests.filter((p) => p.status === "open");
-  const closedPrs = pullRequests.filter((p) => p.status === "closed" || p.status === "merged");
-  const displayedPrs = tab === "open" ? openPrs : closedPrs;
 
   useEffect(() => {
     fetchPullRequests(promptId).then((result) => {
@@ -81,41 +75,11 @@ export function PullRequestsListModal({
           <p className="mb-4 text-sm text-muted-foreground">
             Proposed changes and improvements to this prompt
           </p>
-          <div className="mb-4 flex gap-2 border-b border-border">
-            <button
-              type="button"
-              onClick={() => setTab("open")}
-              className={cn(
-                "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
-                tab === "open"
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Open ({openPrs.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("closed")}
-              className={cn(
-                "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
-                tab === "closed"
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Closed ({closedPrs.length})
-            </button>
-          </div>
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : displayedPrs.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              {tab === "open" ? "No open pull requests" : "No closed pull requests"}
-            </p>
           ) : (
             <div className="space-y-2">
-            {displayedPrs.map((pr) => (
+            {pullRequests.map((pr) => (
               <button
                 key={pr.id}
                 type="button"
@@ -133,21 +97,15 @@ export function PullRequestsListModal({
                     </p>
                   </div>
                   <span
-                    className={cn(
-                      "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
-                      pr.status === "merged" &&
-                        "bg-purple-500/20 text-purple-600 dark:text-purple-400",
-                      pr.status === "closed" &&
-                        "bg-red-500/20 text-red-600 dark:text-red-400",
-                      pr.status === "open" &&
-                        "bg-green-500/20 text-green-600 dark:text-green-400"
-                    )}
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                      pr.status === "merged"
+                        ? "bg-purple-500/20 text-purple-600 dark:text-purple-400"
+                        : pr.status === "closed"
+                          ? "bg-red-500/20 text-red-600 dark:text-red-400"
+                          : "bg-green-500/20 text-green-600 dark:text-green-400"
+                    }`}
                   >
-                    {pr.status === "merged" ? (
-                      <span className="inline-flex items-center gap-1">
-                        <GitMerge className="size-3" /> Merged
-                      </span>
-                    ) : pr.status}
+                    {pr.status}
                   </span>
                 </div>
               </button>

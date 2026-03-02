@@ -52,13 +52,6 @@ export function ContributionActivity({
     return result;
   }, [profileCreatedAt]);
   const [selectedYear, setSelectedYear] = useState(years[0] ?? new Date().getFullYear());
-
-  const filterByYear = (dateStr: string) =>
-    new Date(dateStr).getFullYear() === selectedYear;
-
-  const createdInYear = createdPrompts.filter((p) => filterByYear(p.createdAt));
-  const questionsInYear = discussionQuestions.filter((q) => filterByYear(q.createdAt));
-
   const totalAnswers = answersByPrompt.reduce((sum, p) => sum + p.count, 0);
   const maxAnswers = Math.max(...answersByPrompt.map((p) => p.count), 1);
   const hasActivity =
@@ -66,17 +59,12 @@ export function ContributionActivity({
     prsByPrompt.length > 0 ||
     discussionQuestions.length > 0 ||
     answersByPrompt.length > 0;
-  const hasActivityInYear =
-    createdInYear.length > 0 ||
-    prsByPrompt.length > 0 ||
-    questionsInYear.length > 0 ||
-    answersByPrompt.length > 0;
 
   return (
     <section className="flex gap-8">
       <div className="min-w-0 flex-1">
         <h2 className="text-lg font-semibold">Contribution activity</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{selectedYear}</p>
+        <p className="mt-1 text-sm text-muted-foreground">February {selectedYear}</p>
 
         {!hasActivity && (
           <div className="mt-6 flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
@@ -86,13 +74,13 @@ export function ContributionActivity({
         )}
 
         {/* Created prompts */}
-        {createdInYear.length > 0 && (
+        {createdPrompts.length > 0 && (
           <div className="mt-6 border-b border-border pb-6">
             <p className="text-sm text-muted-foreground">
-              Created {createdInYear.length} prompt{createdInYear.length !== 1 ? "s" : ""}
+              Created {createdPrompts.length} prompt{createdPrompts.length !== 1 ? "s" : ""}
             </p>
             <div className="mt-3 space-y-2 ml-6">
-              {createdInYear.map((item) => (
+              {createdPrompts.map((item) => (
                 <Link
                   key={item.promptId}
                   href={`/prompts/${item.promptId}`}
@@ -147,11 +135,11 @@ export function ContributionActivity({
         )}
 
         {/* Discussion questions */}
-        {questionsInYear.length > 0 && (
+        {discussionQuestions.length > 0 && (
           <div className="mt-4 border-b border-border pb-6">
             <p className="text-sm font-medium">Discussion questions</p>
             <div className="mt-3 space-y-2 ml-6">
-              {questionsInYear.map((item) => (
+              {discussionQuestions.map((item) => (
                 <Link
                   key={item.id}
                   href={`/prompts/${item.promptId}#discussion`}
@@ -196,10 +184,10 @@ export function ContributionActivity({
           </div>
         )}
 
-        {hasActivity && !hasActivityInYear && (
-          <p className="mt-6 text-sm text-muted-foreground">
-            No activity in {selectedYear}. Try selecting another year.
-          </p>
+        {hasActivity && (
+          <Button variant="outline" size="sm" className="mt-8 w-full">
+            Show more activity
+          </Button>
         )}
       </div>
 

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
+import { PromptCodeBlock, PromptDiffView } from "@/components/prompt-library";
 import { MarkdownEditor } from "@/components/prompt-library/markdown-editor";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth-provider";
@@ -34,7 +35,7 @@ type PullRequestModalProps = {
   prId: string;
   highlightedCommentId?: string;
   onClose: () => void;
-  onMergeOrClose?: () => void;
+  onPrUpdated?: () => void;
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -67,7 +68,7 @@ export function PullRequestModal({
   prId,
   highlightedCommentId,
   onClose,
-  onMergeOrClose,
+  onPrUpdated,
 }: PullRequestModalProps) {
   const router = useRouter();
   const { user, currentUser } = useAuth();
@@ -75,7 +76,7 @@ export function PullRequestModal({
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
   const [postingComment, setPostingComment] = useState(false);
-  const [mergeCloseLoading, setMergeCloseLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchPullRequest(promptId, prId).then((result) => {
@@ -136,44 +137,6 @@ export function PullRequestModal({
     }
   }
 
-  async function handleMerge() {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    if (!pr?.canMerge) return;
-    setMergeCloseLoading(true);
-    try {
-      const token = await user.getIdToken();
-      const result = await mergePullRequest(token, promptId, prId);
-      if (result.success && result.pullRequest) {
-        setPr(result.pullRequest);
-        onMergeOrClose?.();
-      }
-    } finally {
-      setMergeCloseLoading(false);
-    }
-  }
-
-  async function handleClose() {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    if (!pr?.canClose) return;
-    setMergeCloseLoading(true);
-    try {
-      const token = await user.getIdToken();
-      const result = await closePullRequest(token, promptId, prId);
-      if (result.success && result.pullRequest) {
-        setPr(result.pullRequest);
-        onMergeOrClose?.();
-      }
-    } finally {
-      setMergeCloseLoading(false);
-    }
-  }
-
   async function handleVoteComment(commentId: string) {
     if (!user) {
       router.push("/login");
@@ -206,6 +169,36 @@ export function PullRequestModal({
         commentTree: prev.commentTree ? updateVotes(prev.commentTree) : prev.commentTree,
       };
     });
+  }
+
+  async function handleMerge() {
+    if (!user || !pr?.canMerge) return;
+    setActionLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const result = await mergePullRequest(token, promptId, prId);
+      if (result.success) {
+        setPr(result.pullRequest);
+        onPrUpdated?.();
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleClose() {
+    if (!user || !pr?.canClose) return;
+    setActionLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const result = await closePullRequest(token, promptId, prId);
+      if (result.success) {
+        setPr(result.pullRequest);
+        onPrUpdated?.();
+      }
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   if (loading || !pr) return null;
@@ -360,22 +353,24 @@ export function PullRequestModal({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {pr.canMerge && (
+            {isPrOpen && pr.canMerge && (
               <Button
+                size="sm"
                 onClick={() => void handleMerge()}
-                disabled={mergeCloseLoading}
-                className="gap-1 bg-green-600 hover:bg-green-700"
+                disabled={actionLoading}
+                className="gap-1.5 bg-green-600 hover:bg-green-700"
               >
                 <GitMerge className="size-4" />
-                {mergeCloseLoading ? "Merging…" : "Merge"}
+                {actionLoading ? "Merging…" : "Merge"}
               </Button>
             )}
-            {pr.canClose && (
+            {isPrOpen && pr.canClose && (
               <Button
+                size="sm"
                 variant="outline"
                 onClick={() => void handleClose()}
-                disabled={mergeCloseLoading}
-                className="gap-1"
+                disabled={actionLoading}
+                className="gap-1.5"
               >
                 <X className="size-4" />
                 Close
@@ -409,38 +404,23 @@ export function PullRequestModal({
                 </div>
               </div>
 
-              {/* Changes */}
-              {pr.promptDiff && (
+              {/* Prompt diff */}
+              {(pr.proposedPrimaryPrompt != null || pr.promptDiff) && (
                 <div className="rounded-lg border border-border bg-card">
                   <div className="flex items-center gap-2 border-b border-border px-4 py-3">
                     <GitBranch className="size-4 text-muted-foreground" />
-                    <span className="font-medium">Changes</span>
+                    <span className="font-medium">Prompt Difference</span>
                   </div>
-                  <div className="p-4">
-                    <div className="overflow-x-auto rounded-lg border border-border bg-muted/30 font-mono text-sm">
-                      {pr.promptDiff.split("\n").map((line, i) => {
-                        const isRemoval = line.startsWith("-") && !line.startsWith("---");
-                        const isAddition = line.startsWith("+") && !line.startsWith("+++");
-                        const isChunk = line.startsWith("@@");
-                        return (
-                          <div
-                            key={i}
-                            className={cn(
-                              "whitespace-pre-wrap break-words border-l-2 pl-2",
-                              isRemoval &&
-                                "border-red-500/60 bg-red-500/10 text-red-700 dark:text-red-400",
-                              isAddition &&
-                                "border-green-500/60 bg-green-500/10 text-green-700 dark:text-green-400",
-                              isChunk && "border-blue-500/40 bg-blue-500/5 text-muted-foreground",
-                              !isRemoval && !isAddition && !isChunk &&
-                                "border-transparent text-muted-foreground"
-                            )}
-                          >
-                            {line || " "}
-                          </div>
-                        );
-                      })}
-                    </div>
+                  <div className="max-h-[min(60vh,28rem)] overflow-auto p-4">
+                    {pr.proposedPrimaryPrompt != null ? (
+                      <PromptDiffView
+                        oldText={pr.basePrimaryPrompt ?? ""}
+                        newText={pr.proposedPrimaryPrompt}
+                        className="max-h-full"
+                      />
+                    ) : pr.promptDiff ? (
+                      <PromptCodeBlock content={pr.promptDiff} />
+                    ) : null}
                   </div>
                 </div>
               )}

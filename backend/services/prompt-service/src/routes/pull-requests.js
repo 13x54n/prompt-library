@@ -1,58 +1,9 @@
 import { Router } from "express";
-import * as Diff from "diff";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
 import { Prompt } from "../models/Prompt.js";
 import { PullRequest } from "../models/PullRequest.js";
 import { publishDomainEvent } from "../lib/event-publisher.js";
 import { ensurePromptAccessOr404 } from "../lib/prompt-visibility.js";
-
-/**
- * Compute unified diff between current prompt content and proposed content.
- * Used when promptDiff was not provided at PR creation.
- */
-function computePromptDiff(prompt, pr) {
-  const parts = [];
-  const promptPrimary = prompt.primaryPrompt ?? "";
-  const promptGuide = prompt.guide ?? "";
-  const prPrimary = pr.proposedPrimaryPrompt ?? null;
-  const prGuide = pr.proposedGuide ?? null;
-
-  if (prPrimary != null && prPrimary !== promptPrimary) {
-    const diff = Diff.createTwoFilesPatch(
-      "primaryPrompt",
-      "primaryPrompt",
-      promptPrimary,
-      prPrimary,
-      undefined,
-      undefined,
-      { context: 2 }
-    );
-    parts.push(diff);
-  }
-  if (prGuide != null && prGuide !== promptGuide) {
-    const diff = Diff.createTwoFilesPatch(
-      "guide",
-      "guide",
-      promptGuide,
-      prGuide,
-      undefined,
-      undefined,
-      { context: 2 }
-    );
-    parts.push(diff);
-  }
-
-  if (pr.proposedTags?.length && Array.isArray(prompt.tags)) {
-    const oldTags = (prompt.tags ?? []).join(", ");
-    const newTags = pr.proposedTags.join(", ");
-    if (oldTags !== newTags) {
-      const diff = Diff.createTwoFilesPatch("tags", "tags", oldTags, newTags);
-      parts.push(diff);
-    }
-  }
-
-  return parts.length > 0 ? parts.join("\n").trim() : null;
-}
 
 const router = Router({ mergeParams: true });
 
@@ -245,16 +196,11 @@ router.get("/:prId", optionalAuth, async (req, res) => {
       return res.status(404).json({ success: false, error: "Pull request not found" });
     }
 
-    let promptDiff = pr.promptDiff ?? null;
-    if (!promptDiff && (pr.proposedPrimaryPrompt != null || pr.proposedGuide != null)) {
-      promptDiff = computePromptDiff(prompt, pr);
-    }
-
     const formatted = formatPr(pr, {
       viewerUid: req.uid ?? null,
       promptOwnerUid: prompt.authorUid ?? null,
     });
-    if (promptDiff) formatted.promptDiff = promptDiff;
+    formatted.basePrimaryPrompt = prompt.primaryPrompt ?? "";
 
     res.json({
       success: true,

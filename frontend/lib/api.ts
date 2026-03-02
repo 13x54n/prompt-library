@@ -703,14 +703,15 @@ export type ApiPullRequest = ApiPullRequestSummary & {
   body: string;
   baseBranch: string;
   headBranch: string;
+  basePrimaryPrompt?: string;
   promptDiff?: string | null;
   proposedPrimaryPrompt?: string | null;
   proposedGuide?: string | null;
   proposedTags?: string[];
-  comments: ApiPullRequestComment[];
-  commentTree?: ApiPullRequestComment[];
   canMerge?: boolean;
   canClose?: boolean;
+  comments: ApiPullRequestComment[];
+  commentTree?: ApiPullRequestComment[];
 };
 
 export type ApiPullRequestComment = {

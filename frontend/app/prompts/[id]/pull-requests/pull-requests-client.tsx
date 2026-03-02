@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
-import { ChevronLeft, GitPullRequest, GitMerge, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronLeft, GitPullRequest } from "lucide-react";
 import { PullRequestModal } from "@/components/pull-request-modal";
 import { fetchPullRequests, type ApiPullRequestSummary } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -31,8 +31,8 @@ export function PullRequestsClient({ promptId }: PullRequestsClientProps) {
     });
   }, [promptId]);
 
-  const openPrs = pullRequests.filter((p) => p.status === "open");
-  const closedPrs = pullRequests.filter((p) => p.status === "closed" || p.status === "merged");
+  const openPrs = pullRequests.filter((pr) => pr.status === "open");
+  const closedPrs = pullRequests.filter((pr) => pr.status === "closed" || pr.status === "merged");
   const displayedPrs = tab === "open" ? openPrs : closedPrs;
 
   const handleOpenPr = (prId: string) => {
@@ -49,13 +49,9 @@ export function PullRequestsClient({ promptId }: PullRequestsClientProps) {
       const href = `/prompts/${promptId}/pull-requests${qs ? `?${qs}` : ""}`;
       router.replace(href, { scroll: false });
     }
-  };
-
-  const handleMergeOrClose = () => {
     fetchPullRequests(promptId).then((result) => {
       if (result.success) setPullRequests(result.pullRequests);
     });
-    router.refresh();
   };
 
   return (
@@ -80,42 +76,45 @@ export function PullRequestsClient({ promptId }: PullRequestsClientProps) {
             </p>
           </header>
 
-          <div className="mb-4 flex gap-2 border-b border-border">
+          {/* Open / Closed tabs */}
+          <div className="mb-6 flex gap-1 rounded-lg border border-border bg-muted/30 p-1">
             <button
               type="button"
               onClick={() => setTab("open")}
               className={cn(
-                "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+                "rounded-md px-4 py-2 text-sm font-medium transition-colors",
                 tab === "open"
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
-              Open ({openPrs.length})
+              Open {openPrs.length > 0 && `(${openPrs.length})`}
             </button>
             <button
               type="button"
               onClick={() => setTab("closed")}
               className={cn(
-                "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+                "rounded-md px-4 py-2 text-sm font-medium transition-colors",
                 tab === "closed"
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
-              Closed ({closedPrs.length})
+              Closed {closedPrs.length > 0 && `(${closedPrs.length})`}
             </button>
           </div>
 
-          <div className="space-y-2">
-            {loading ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
-            ) : displayedPrs.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                {tab === "open" ? "No open pull requests" : "No closed pull requests"}
-              </p>
-            ) : (
-              displayedPrs.map((pr) => (
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : displayedPrs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {tab === "open"
+                ? "No open pull requests. Create one to propose changes."
+                : "No closed pull requests yet."}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {displayedPrs.map((pr) => (
                 <button
                   key={pr.id}
                   type="button"
@@ -134,31 +133,20 @@ export function PullRequestsClient({ promptId }: PullRequestsClientProps) {
                     <span
                       className={cn(
                         "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
-                        pr.status === "merged" &&
-                          "bg-purple-500/20 text-purple-600 dark:text-purple-400",
-                        pr.status === "closed" &&
-                          "bg-red-500/20 text-red-600 dark:text-red-400",
-                        pr.status === "open" &&
-                          "bg-green-500/20 text-green-600 dark:text-green-400"
+                        pr.status === "merged"
+                          ? "bg-purple-500/20 text-purple-600 dark:text-purple-400"
+                          : pr.status === "closed"
+                            ? "bg-red-500/20 text-red-600 dark:text-red-400"
+                            : "bg-green-500/20 text-green-600 dark:text-green-400"
                       )}
                     >
-                      {pr.status === "merged" ? (
-                        <span className="inline-flex items-center gap-1">
-                          <GitMerge className="size-3" /> Merged
-                        </span>
-                      ) : pr.status === "closed" ? (
-                        <span className="inline-flex items-center gap-1">
-                          <X className="size-3" /> Closed
-                        </span>
-                      ) : (
-                        pr.status
-                      )}
+                      {pr.status}
                     </span>
                   </div>
                 </button>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -168,7 +156,11 @@ export function PullRequestsClient({ promptId }: PullRequestsClientProps) {
           prId={activePrId}
           highlightedCommentId={commentFromUrl ?? undefined}
           onClose={handleCloseModal}
-          onMergeOrClose={handleMergeOrClose}
+          onPrUpdated={() => {
+            fetchPullRequests(promptId).then((result) => {
+              if (result.success) setPullRequests(result.pullRequests);
+            });
+          }}
         />
       )}
     </>
