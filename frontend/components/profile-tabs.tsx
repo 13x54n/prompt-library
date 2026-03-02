@@ -93,7 +93,7 @@ export function ProfileTabs({
   const [isSavingPins, setIsSavingPins] = useState(false);
   const MAX_PINNED = 10;
 
-  const profileBase = `/profile/${encodeURIComponent(profileUid)}`;
+  const profileBase = `/profile/${encodeURIComponent(username)}`;
 
   const filteredPrompts = useMemo(() => {
     if (!searchQuery.trim()) return allPrompts;
@@ -184,7 +184,7 @@ export function ProfileTabs({
       <div className="pt-6">
         {activeTab === "overview" && (
           <div className="space-y-8">
-            {pinnedPrompts.length > 0 && (
+            {(pinnedPrompts.length > 0 || isOwnProfile) && (
               <section>
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-lg font-semibold">Pinned Prompts</h2>
@@ -192,21 +192,33 @@ export function ProfileTabs({
                     <div className="flex justify-end">
                       <Button size="sm" variant="outline" className="gap-1" onClick={openPinsModal}>
                         <Pencil className="size-4" />
-                        Edit pins
+                        {pinnedPrompts.length > 0 ? "Edit pins" : "Pin prompts"}
                       </Button>
                     </div>
                   )}
                 </div>
-                <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {pinnedPrompts.map((prompt) => (
-                    <div key={prompt.id} className="min-w-0">
-                      <PromptCard
-                        prompt={prompt}
-                        className="flex-col border-b-0 rounded-lg border border-border bg-card p-4 sm:flex-col"
-                      />
-                    </div>
-                  ))}
-                </div>
+                {pinnedPrompts.length > 0 ? (
+                  <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {pinnedPrompts.map((prompt) => (
+                      <div key={prompt.id} className="min-w-0">
+                        <PromptCard
+                          prompt={prompt}
+                          className="flex-col border-b-0 rounded-lg border border-border bg-card p-4 sm:flex-col"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : isOwnProfile ? (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-center">
+                    <p className="mb-2 text-sm text-muted-foreground">
+                      Pin up to {MAX_PINNED} prompts to showcase them here
+                    </p>
+                    <Button size="sm" variant="outline" className="gap-1" onClick={openPinsModal}>
+                      <Pencil className="size-4" />
+                      Pin prompts
+                    </Button>
+                  </div>
+                ) : null}
               </section>
             )}
 
