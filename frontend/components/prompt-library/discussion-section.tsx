@@ -249,7 +249,7 @@ function QuestionItem({
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="font-medium hover:text-primary">{question.title}</h3>
-          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{question.body}</p>
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">{question.body}</p>
           <p className="mt-2 text-xs text-muted-foreground">
             @{question.author} · {question.createdAt}
           </p>
