@@ -105,11 +105,11 @@ export function PromptCard({ prompt, className }: PromptCardProps) {
           forks={prompt.stats.forks}
           views={prompt.stats.views}
         />
-        <div className="w-full min-w-0">
-          <ActivityLineChart
-            data={chartData}
-          />
-        </div>
+        {chartData.length >= 2 && Math.min(...chartData) !== Math.max(...chartData) && (
+          <div className="w-full min-w-0">
+            <ActivityLineChart data={chartData} />
+          </div>
+        )}
       </div>
     </article>
   );

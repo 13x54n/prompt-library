@@ -20,6 +20,7 @@ export function ActivityLineChart({
 
     const min = Math.min(...data);
     const max = Math.max(...data);
+    if (min === max) return { path: "", width: w, height: h };
     const range = max - min || 1;
     const padding = 1;
 
@@ -37,6 +38,9 @@ export function ActivityLineChart({
   }, [data]);
 
   if (data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  if (min === max) return null;
 
   return (
     <svg
