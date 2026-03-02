@@ -1,4 +1,5 @@
 import { Router } from "express";
+import mongoose from "mongoose";
 import { Prompt } from "../models/Prompt.js";
 import { Upvote } from "../models/Upvote.js";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
@@ -885,6 +886,10 @@ router.patch("/:id", requireAuth, async (req, res) => {
     const { id } = req.params;
     const { title, description, tags, primaryPrompt, guide, visibility, parameters, variants, isPinned } = req.body;
 
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: "Invalid prompt ID" });
+    }
+
     const existing = await Prompt.findOne({ _id: id });
     if (!existing) {
       return res.status(404).json({ success: false, error: "Prompt not found" });
@@ -902,7 +907,10 @@ router.patch("/:id", requireAuth, async (req, res) => {
     if (visibility !== undefined) updates.visibility = visibility === "unlisted" ? "unlisted" : "public";
     if (Array.isArray(parameters)) updates.parameters = parameters;
     if (Array.isArray(variants)) updates.variants = variants;
-    if (typeof isPinned === "boolean") updates.isPinned = isPinned;
+    // Support boolean or string "true"/"false" for isPinned (e.g. from proxies)
+    if (isPinned !== undefined) {
+      updates.isPinned = isPinned === true || isPinned === "true";
+    }
 
     const prompt = await Prompt.findByIdAndUpdate(id, { $set: updates }, { new: true }).lean();
 
