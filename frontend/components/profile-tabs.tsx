@@ -197,13 +197,14 @@ export function ProfileTabs({
                     </div>
                   )}
                 </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {pinnedPrompts.map((prompt) => (
-                    <PromptCard
-                      key={prompt.id}
-                      prompt={prompt}
-                      className="flex-col border-b-0 rounded-lg border border-border bg-card p-4 sm:flex-col"
-                    />
+                    <div key={prompt.id} className="min-w-0">
+                      <PromptCard
+                        prompt={prompt}
+                        className="flex-col border-b-0 rounded-lg border border-border bg-card p-4 sm:flex-col"
+                      />
+                    </div>
                   ))}
                 </div>
               </section>

@@ -264,6 +264,11 @@ function QuestionItem({
 
       {isExpanded && (
         <div className="border-t border-border p-4">
+          <div className="mb-4 pl-4">
+            <div className="prose prose-sm dark:prose-invert max-w-none text-sm text-muted-foreground">
+              <ReactMarkdown>{question.body}</ReactMarkdown>
+            </div>
+          </div>
           <div className="mb-3 pl-4">
             <Button
               size="sm"

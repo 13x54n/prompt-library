@@ -22,10 +22,17 @@ export function ProfileCard({ profileUser, handle }: ProfileCardProps) {
   const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
   const [followersCount, setFollowersCount] = useState(profileUser.followersCount ?? 0);
 
-  const displayName = profileUser.displayName ?? profileUser.username ?? handle;
   const isOwnProfile = Boolean(currentUser && profileUser.uid === currentUser.uid);
-  // Always use backend (profileUser); currentUser mirrors backend after refetch
-  const photoURL = profileUser.photoURL;
+  // Use currentUser for own profile so edits reflect immediately (no manual refresh)
+  const displayName = isOwnProfile && currentUser
+    ? (currentUser.displayName ?? currentUser.username ?? currentUser.profileSlug)
+    : (profileUser.displayName ?? profileUser.username ?? handle);
+  const photoURL = isOwnProfile && currentUser ? currentUser.photoURL : profileUser.photoURL;
+  const bio = isOwnProfile && currentUser ? currentUser.bio : profileUser.bio;
+  const website = isOwnProfile && currentUser ? currentUser.website : profileUser.website;
+  const displayHandle = isOwnProfile && currentUser
+    ? (currentUser.username ?? currentUser.profileSlug)
+    : handle;
 
   async function handleToggleFollow() {
     if (!user || isOwnProfile) return;
@@ -69,7 +76,7 @@ export function ProfileCard({ profileUser, handle }: ProfileCardProps) {
 
           <h1 className="mt-4 text-2xl font-bold">{displayName}</h1>
           <div>
-            <h2 className="font-semibold text-muted-foreground">@{handle}</h2>
+            <h2 className="font-semibold text-muted-foreground">@{displayHandle}</h2>
           </div>
 
           <div className="mt-4 flex gap-2 text-sm text-muted-foreground">
@@ -77,8 +84,8 @@ export function ProfileCard({ profileUser, handle }: ProfileCardProps) {
             <span>{profileUser.followingCount ?? 0} Following</span>
           </div>
 
-          {profileUser.bio && (
-            <p className="text-muted-foreground mt-2 text-sm">{profileUser.bio}</p>
+          {bio && (
+            <p className="text-muted-foreground mt-2 text-sm">{bio}</p>
           )}
         </div>
 
@@ -108,16 +115,16 @@ export function ProfileCard({ profileUser, handle }: ProfileCardProps) {
           </div>
         )}
 
-        {profileUser.website && (
+        {website && (
           <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
             <Link2 className="size-4 shrink-0" />
             <a
-              href={profileUser.website}
+              href={website}
               target="_blank"
               rel="noopener noreferrer"
               className="truncate hover:text-foreground"
             >
-              {profileUser.website}
+              {website}
             </a>
           </div>
         )}

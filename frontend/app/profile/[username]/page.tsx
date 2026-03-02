@@ -129,8 +129,21 @@ export default async function ProfilePage({
     }
   }
 
+  const rawPrompts = promptsResult.success ? promptsResult.prompts : [];
+  // Sort: pinned first by most recently updated, then unpinned by creation order
+  rawPrompts.sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    if (a.isPinned && b.isPinned) {
+      const aTime = new Date(a.lastUpdated ?? 0).getTime();
+      const bTime = new Date(b.lastUpdated ?? 0).getTime();
+      return bTime - aTime;
+    }
+    return 0;
+  });
+
   const prompts = promptsResult.success
-    ? promptsResult.prompts.map((p) => {
+    ? rawPrompts.map((p) => {
         const parentMeta = p.parentPromptId ? parentPromptMetaById.get(p.parentPromptId) : null;
         return toPromptCard({
           ...p,

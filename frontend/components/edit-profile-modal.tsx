@@ -109,7 +109,8 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
       const { updated, errorMessage } = await updateProfile(token, payload);
       if (updated) {
         await refetchBackendUser();
-        router.push(`/profile/${encodeURIComponent(updated.uid ?? user.uid)}`);
+        const profileSlug = updated.username ?? updated.displayName ?? updated.uid ?? user.uid;
+        router.push(`/profile/${encodeURIComponent(profileSlug)}`);
         router.refresh();
         onClose();
       } else {
