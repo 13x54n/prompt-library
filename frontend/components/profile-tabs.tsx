@@ -185,7 +185,7 @@ export function ProfileTabs({
         {activeTab === "overview" && (
           <div className="space-y-8">
             {pinnedPrompts.length > 0 && (
-              <section>
+              <section className="min-w-0 overflow-hidden">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-lg font-semibold">Pinned Prompts</h2>
                   {isOwnProfile && (
@@ -199,7 +199,7 @@ export function ProfileTabs({
                 </div>
                 <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {pinnedPrompts.map((prompt) => (
-                    <div key={prompt.id} className="min-w-0">
+                    <div key={prompt.id} className="min-w-0 overflow-hidden">
                       <PromptCard
                         prompt={prompt}
                         className="flex-col border-b-0 rounded-lg border border-border bg-card p-4 sm:flex-col"

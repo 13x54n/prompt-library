@@ -49,30 +49,30 @@ export function PromptCard({ prompt, className }: PromptCardProps) {
   return (
     <article
       className={cn(
-        "group flex flex-col gap-3 border-b border-border py-4 last:border-b-0 sm:flex-row sm:items-start sm:justify-center sm:gap-4 px-4",
+        "group flex min-w-0 flex-col overflow-hidden gap-3 border-b border-border py-4 last:border-b-0 sm:flex-row sm:items-start sm:justify-center sm:gap-4 px-4",
         className
       )}
     >
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="min-w-0 overflow-hidden">
           <Link
             href={`/prompts/${prompt.id}`}
-            className="min-w-0 break-words font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded line-clamp-2 sm:truncate"
+            className="block font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded line-clamp-2"
           >
             {prompt.title}
           </Link>
         </div>
-        <p className="mt-0.5 line-clamp-2 min-w-0 break-words text-sm text-muted-foreground">
+        <p className="mt-0.5 line-clamp-2 min-w-0 overflow-hidden text-sm text-muted-foreground">
           {prompt.description}
         </p>
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <div className="mt-2 flex min-w-0 flex-wrap gap-1.5 overflow-hidden">
           {prompt.tags.map((tag) => (
             <TagChip key={tag} tag={tag} href={`/?tag=${encodeURIComponent(tag)}`} />
           ))}
         </div>
         {/* contributor */}
-        <div className="mt-2 flex items-center gap-2">
-          <p className="text-xs text-muted-foreground">
+        <div className="mt-2 flex min-w-0 items-center gap-2 overflow-hidden">
+          <p className="text-xs text-muted-foreground truncate">
             Contributed by{" "}
             <Link href={authorProfileHref} className="text-muted-foreground hover:underline">
               @{prompt.username}
@@ -80,21 +80,19 @@ export function PromptCard({ prompt, className }: PromptCardProps) {
           </p>
         </div>
         {prompt.parentPromptId && prompt.parentPromptTitle && (
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 line-clamp-2 min-w-0 overflow-hidden text-xs text-muted-foreground">
             Forked from{" "}
-            <>
-              <Link href={`/prompts/${prompt.parentPromptId}`} className="hover:underline">
-                {prompt.parentPromptTitle}
-              </Link>
-              {prompt.parentPromptUsername && (
-                <>
-                  {" "}by{" "}
-                  <Link href={parentAuthorHref ?? "#"} className="hover:underline">
-                    @{prompt.parentPromptUsername}
-                  </Link>
-                </>
-              )}
-            </>
+            <Link href={`/prompts/${prompt.parentPromptId}`} className="hover:underline">
+              {prompt.parentPromptTitle}
+            </Link>
+            {prompt.parentPromptUsername && (
+              <>
+                {" "}by{" "}
+                <Link href={parentAuthorHref ?? "#"} className="hover:underline">
+                  @{prompt.parentPromptUsername}
+                </Link>
+              </>
+            )}
           </p>
         )}
       </div>
