@@ -52,6 +52,7 @@ export function PromptHeader({
   const [forkError, setForkError] = useState<string | null>(null);
   const [isPinned, setIsPinned] = useState(initialPinned);
   const [pinLoading, setPinLoading] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(prompt.title);
   const [editDescription, setEditDescription] = useState(prompt.description);
@@ -71,6 +72,10 @@ export function PromptHeader({
       });
     });
   }, [user, promptId]);
+
+  useEffect(() => {
+    setIsPinned(initialPinned);
+  }, [initialPinned]);
 
   const isOwner = Boolean(user?.uid && promptAuthorUid && user.uid === promptAuthorUid);
 
@@ -122,12 +127,18 @@ export function PromptHeader({
   async function handleTogglePin() {
     if (!user || !isOwner) return;
     setPinLoading(true);
+    setPinError(null);
     try {
       const token = await user.getIdToken();
       const result = await setPromptPinned(token, promptId, !isPinned);
       if (result.success) {
         setIsPinned(result.prompt?.isPinned ?? !isPinned);
+        router.refresh();
+      } else {
+        setPinError(result.error ?? "Failed to update pin");
       }
+    } catch (err) {
+      setPinError(err instanceof Error ? err.message : "Failed to update pin");
     } finally {
       setPinLoading(false);
     }
@@ -245,16 +256,21 @@ export function PromptHeader({
           </>
         )}
         {isOwner && (
-          <Button
-            size="sm"
-            variant={isPinned ? "default" : "outline"}
-            className="gap-1"
-            onClick={handleTogglePin}
-            disabled={pinLoading}
-          >
-            <Pin className="size-4" />
-            {pinLoading ? "Updating..." : isPinned ? "Unpin project" : "Pin project"}
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant={isPinned ? "default" : "outline"}
+              className="gap-1"
+              onClick={handleTogglePin}
+              disabled={pinLoading}
+            >
+              <Pin className="size-4" />
+              {pinLoading ? "Updating..." : isPinned ? "Unpin project" : "Pin project"}
+            </Button>
+            {pinError && (
+              <span className="w-full text-xs text-destructive">{pinError}</span>
+            )}
+          </>
         )}
         {isOwner && (
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setIsEditing(true)}>
