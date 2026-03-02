@@ -210,7 +210,7 @@ export function ExploreFeedClient({ initialPrompts, initialTotal = 0, initialTag
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card">
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
         <Button
           size="sm"

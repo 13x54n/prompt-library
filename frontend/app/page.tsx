@@ -168,31 +168,34 @@ export default async function ExplorePage({
   const trendingTopics = tagsRes.success ? tagsRes.tags : [];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:h-full">
-      <div className="mx-auto flex min-h-0 max-h-full max-w-7xl flex-1 flex-col gap-6 overflow-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-8">
-          {/* Left: Trending Developers - desktop first column, mobile after prompts */}
-          <aside className="order-2 min-w-0 shrink-0 lg:order-1">
-            <h2 className="mb-3 flex items-center gap-2 text-base font-semibold sm:mb-4 sm:text-lg">
-              <Users className="size-5 shrink-0 text-blue-500/90" />
-              <span className="truncate">Trending Developers</span>
-            </h2>
-            <div className="flex flex-col rounded-lg border border-border bg-card">
-              {trendingDevelopersWithProfile.map((dev) => (
-                <TrendingDeveloperCard key={dev.username} dev={dev} />
-              ))}
-            </div>
-            <Link
-              href="/explore/trending?tab=developers"
-              className="mt-2 block text-center text-sm text-muted-foreground hover:text-foreground"
-            >
-              See all
-            </Link>
-
+    <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto lg:h-full lg:overflow-hidden">
+      <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-6 overflow-x-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-8 lg:max-h-full lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-8 lg:overflow-hidden">
+          {/* Mobile: Trending Topics first. Desktop: left column with Developers + Topics */}
+          <aside className="order-1 min-w-0 shrink-0 lg:order-1">
+            {/* Trending Topics - always visible, top on mobile */}
             <TrendingTopicsClient topics={trendingTopics} />
+            {/* Trending Developers - desktop only */}
+            <div className="hidden lg:block">
+              <h2 className="mb-3 mt-6 flex items-center gap-2 text-base font-semibold sm:mb-4 sm:text-lg">
+                <Users className="size-5 shrink-0 text-blue-500/90" />
+                <span className="truncate">Trending Developers</span>
+              </h2>
+              <div className="flex flex-col rounded-lg border border-border bg-card">
+                {trendingDevelopersWithProfile.map((dev) => (
+                  <TrendingDeveloperCard key={dev.username} dev={dev} />
+                ))}
+              </div>
+              <Link
+                href="/explore/trending?tab=developers"
+                className="mt-2 block text-center text-sm text-muted-foreground hover:text-foreground"
+              >
+                See all
+              </Link>
+            </div>
           </aside>
 
           {/* Middle: Main prompts - only this section scrolls on desktop */}
-          <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden lg:order-2 lg:min-h-0">
+          <main className="order-2 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden lg:order-2 lg:min-h-0">
             <ExploreFeedClient
               initialPrompts={newestPrompts}
               initialTotal={newestTotal}

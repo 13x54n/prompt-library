@@ -54,15 +54,15 @@ export function PromptCard({ prompt, className }: PromptCardProps) {
       )}
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <Link
             href={`/prompts/${prompt.id}`}
-            className="truncate font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
+            className="min-w-0 break-words font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded line-clamp-2 sm:truncate"
           >
             {prompt.title}
           </Link>
         </div>
-        <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
+        <p className="mt-0.5 line-clamp-2 min-w-0 break-words text-sm text-muted-foreground">
           {prompt.description}
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
