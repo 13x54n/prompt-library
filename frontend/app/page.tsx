@@ -116,7 +116,7 @@ export default async function ExplorePage({
       const bScore = (b.stats?.interactions ?? 0) + (b.stats?.upvotes ?? 0);
       return bScore - aScore;
     })
-    .slice(0, 5)
+    .slice(0, 4)
     .map((p) => {
       const parentMeta = p.parentPromptId ? parentPromptMetaById.get(p.parentPromptId) : null;
       return toPromptCard(p, parentMeta ?? undefined);
@@ -168,8 +168,8 @@ export default async function ExplorePage({
   const trendingTopics = tagsRes.success ? tagsRes.tags : [];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="mx-auto flex min-h-0 max-w-7xl flex-1 flex-col gap-6 overflow-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] lg:items-start lg:gap-8">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:h-full">
+      <div className="mx-auto flex min-h-0 max-h-full max-w-7xl flex-1 flex-col gap-6 overflow-hidden px-4 py-6 sm:gap-8 sm:px-6 sm:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-8">
           {/* Left: Trending Developers - desktop first column, mobile after prompts */}
           <aside className="order-2 min-w-0 shrink-0 lg:order-1">
             <h2 className="mb-3 flex items-center gap-2 text-base font-semibold sm:mb-4 sm:text-lg">
@@ -204,8 +204,8 @@ export default async function ExplorePage({
             </div>
           </aside>
 
-          {/* Middle: Main prompts - primary content, scrolls */}
-          <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto lg:order-2">
+          {/* Middle: Main prompts - only this section scrolls on desktop */}
+          <main className="order-1 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden lg:order-2 lg:min-h-0">
             <ExploreFeedClient
               initialPrompts={newestPrompts}
               initialTotal={newestTotal}
