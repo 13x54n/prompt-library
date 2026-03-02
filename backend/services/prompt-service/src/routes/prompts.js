@@ -665,7 +665,9 @@ router.post("/:id/fork", requireAuth, async (req, res) => {
         error: "You can only fork prompts created by other users",
       });
     }
-    const existingFork = await Prompt.findOne({ parentPromptId: id, authorUid: uid });
+    // Always resolve to root: forked prompts point to original for duplicate check
+    const rootId = source.parentPromptId ?? source._id;
+    const existingFork = await Prompt.findOne({ parentPromptId: rootId, authorUid: uid });
     if (existingFork) {
       return res.status(400).json({
         success: false,
@@ -691,14 +693,15 @@ router.post("/:id/fork", requireAuth, async (req, res) => {
       parameters: source.parameters ?? [],
       variants: source.variants ?? [],
       stats: { upvotes: 0, forks: 0, views: 0, interactions: 0 },
-      parentPromptId: source._id,
+      parentPromptId: rootId,
     });
 
-    await Prompt.findByIdAndUpdate(id, { $inc: { "stats.forks": 1 } });
+    await Prompt.findByIdAndUpdate(rootId, { $inc: { "stats.forks": 1 } });
+    const rootPrompt = rootId.toString() === source._id.toString() ? source : await Prompt.findById(rootId).lean();
     await publishDomainEvent("prompt.forked", {
-      promptId: id,
-      promptTitle: source.title ?? "Untitled prompt",
-      promptOwnerUid: source.authorUid,
+      promptId: rootId.toString(),
+      promptTitle: (rootPrompt ?? source).title ?? "Untitled prompt",
+      promptOwnerUid: (rootPrompt ?? source).authorUid,
       actorUid: uid,
       actorUsername: username,
       forkedPromptId: fork._id.toString(),

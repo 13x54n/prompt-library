@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ChevronLeft, GitPullRequest } from "lucide-react";
 import { PullRequestModal } from "@/components/pull-request-modal";
@@ -41,6 +41,7 @@ type PullRequestsClientProps = {
 };
 
 export function PullRequestsClient({ promptId }: PullRequestsClientProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [openPrId, setOpenPrId] = useState<string | null>(null);
 
@@ -54,6 +55,14 @@ export function PullRequestsClient({ promptId }: PullRequestsClientProps) {
 
   const handleCloseModal = () => {
     setOpenPrId(null);
+    if (prFromUrl) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("pr");
+      params.delete("comment");
+      const qs = params.toString();
+      const href = `/prompts/${promptId}/pull-requests${qs ? `?${qs}` : ""}`;
+      router.replace(href, { scroll: false });
+    }
   };
 
   return (
