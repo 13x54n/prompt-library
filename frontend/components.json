@@ -1,0 +1,33 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "radix-nova",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "rtl": false,
+  "menuColor": "default",
+  "menuAccent": "subtle",
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  },
+  "registries": {
+    "@aceternity": "https://ui.aceternity.com/registry/{name}.json",
+    "@unlumen-ui": "https://ui.unlumen.com/r/{name}.json",
+    "@efferd": "https://efferd.com/r/{style}/{name}.json",
+    "@motion-primitives": "https://motion-primitives.com/c/{name}.json",
+    "@abui": "https://abui.io/r/{name}.json",
+    "@tailark": "https://tailark.com/r/{name}.json",
+    "@shadcn-space": "https://shadcnspace.com/r/{name}.json"
+  }
+}
