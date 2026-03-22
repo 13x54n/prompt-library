@@ -2,6 +2,7 @@ import HeroSection from "@/components/hero-section";
 import HowItWorks from "@/components/how-it-works";
 import { InteractiveGridBackground } from "@/components/interactive-grid-background";
 import { StatsCards } from "@/components/stats-cards";
+import { PrimaryItemGridSection } from "@/components/flx/blocks/bento-grids/primary-item-grid/primary-item-grid-example";
 
 
 export default function Home() {
@@ -83,13 +84,14 @@ export default function Home() {
       {/* <InteractiveGridBackground> */}
         {/* <HowItWorks features={features} stepPositions={stepPositions} /> */}
 
-        <StatsCards
+        {/* <StatsCards
           width="w-70"
           height="h-84"
           images={["https://images.unsplash.com/photo-1715635845608-957c4a49500f?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", "https://images.unsplash.com/photo-1612696874005-d015469bc660?q=80&w=996&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"]}
-        />
+        /> */}
 
       {/* </InteractiveGridBackground> */}
+      <PrimaryItemGridSection />
     </div>
   );
 }

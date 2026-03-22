@@ -15,10 +15,10 @@ export default function HeroSection() {
                 <section>
                     <div className="relative">
                         <div className="aspect-2/3 relative z-10 flex flex-col justify-end px-6 lg:aspect-video">
-                            <div className="mx-auto w-full max-w-7xl pb-6 lg:px-12 lg:pb-32">
-                                <div className="max-w-lg">
-                                    <h1 className="text-balance text-5xl md:text-6xl xl:text-7xl">Build 10x Faster with Maple.</h1>
-                                    <p className="mt-6 text-balance text-lg">Create and Monetize your dApps with ease using AI-powered tools.</p>
+                            <div className="mx-auto w-full pb-6 lg:px-12 lg:pb-32">
+                                <div className="max-w-3xl">
+                                    <h1 className="text-balance text-5xl md:text-6xl xl:text-7xl">Agentic interface for Solana dApps.</h1>
+                                    <p className="mt-6 text-balance text-lg">Your agentic layer for Solana dApps — a smarter way to discover, execute, earn, and manage blockchain actions through natural language.</p>
 
                                     <div className="mt-8 flex items-center gap-2">
                                             <PremiumButton/>

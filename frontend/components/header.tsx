@@ -8,10 +8,10 @@ import { useScroll, motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 
 const menuItems = [
-    { name: 'Features', href: '#link' },
-    { name: 'Solution', href: '#link' },
-    { name: 'Pricing', href: '#link' },
-    { name: 'About', href: '#link' },
+    { name: 'Explore', href: '/explore' },
+    { name: 'Featured', href: '/featured' },
+    { name: 'How it Works', href: '/how-it-works' },
+    { name: 'About', href: '/about' },
 ]
 
 export const HeroHeader = () => {
@@ -30,8 +30,8 @@ export const HeroHeader = () => {
         <header>
             <nav
                 data-state={menuState && 'active'}
-                className="fixed z-20 w-full pt-2">
-                <div className={cn('mx-auto max-w-7xl rounded-3xl px-6 transition-all duration-300 lg:px-12', scrolled && 'bg-background/50 backdrop-blur-2xl')}>
+                className="fixed z-20 w-full">
+                <div className={cn('mx-auto max-w-7.5xl  px-6 transition-all duration-300 lg:px-12', scrolled && 'bg-background/50 backdrop-blur-2xl')}>
                     <motion.div
                         key={1}
                         className={cn('relative flex flex-wrap items-center justify-between gap-6 py-3 duration-200 lg:gap-0 lg:py-6', scrolled && 'lg:py-4')}>
