@@ -1,39 +1,38 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Open_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import FooterSection from "@/components/sections/footer/default";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 
 const openSans = Open_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
+  // Avoid Chrome “preloaded but not used” when LCP is WebGL/canvas-heavy (e.g. globe on home).
+  preload: false,
 });
 
-const LINKS = [
-  { label: "About", href: "/about" },
-  {
-    label: "Products",
-    href: "#",
-    children: [
-      {
-        label: "Analytics",
-        href: "/products/analytics",
-        description: "Understand your data.",
-      },
-      {
-        label: "Automation",
-        href: "/products/automation",
-        description: "Streamline workflows.",
-      },
-    ],
-  },
-  { label: "Pricing", href: "/pricing" },
-];
-
-
 export const metadata: Metadata = {
+  applicationName: "Maple",
   title: "Maple",
   description: "Maple is a platform for creating and managing your business.",
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Maple",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#3d6b4a",
 };
 
 export default function RootLayout({
@@ -48,9 +47,11 @@ export default function RootLayout({
       className={`${openSans.variable} dark h-full font-sans antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <ServiceWorkerRegister />
         <ThemeProvider>
           {children}
         </ThemeProvider>
+        <FooterSection/>
       </body>
     </html>
   );

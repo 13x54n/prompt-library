@@ -12,7 +12,7 @@ export default function GlobeDemo() {
     pointSize: 4,
     globeColor: "#000",
     showAtmosphere: true,
-    atmosphereColor: "blue-500",
+    atmosphereColor: "#FFFFFF",
     atmosphereAltitude: 0.1,
     emissive: "#062056",
     emissiveIntensity: 0.1,

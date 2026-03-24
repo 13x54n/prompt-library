@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button'
 import React from 'react'
 import { useScroll, motion } from 'motion/react'
 import { cn } from '@/lib/utils'
+import PremiumButton from './premium-button'
 
 const menuItems = [
-    { name: 'Explore', href: '/explore' },
-    { name: 'Featured', href: '/featured' },
-    { name: 'How it Works', href: '/how-it-works' },
-    { name: 'About', href: '/about' },
+    // { name: 'Explore', href: '/explore' },
+    // { name: 'Featured', href: '/featured' },
+    { name: 'Lightpaper', href: '/whitepaper' },
+    // { name: 'About', href: '/about' },
 ]
 
 export const HeroHeader = () => {
@@ -81,21 +82,9 @@ export const HeroHeader = () => {
                                 </ul>
                             </div>
                             <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-                                <Button
-                                    asChild
-                                    variant="outline"
-                                    size="sm">
-                                    <Link href="#">
-                                        <span>Login</span>
-                                    </Link>
-                                </Button>
-                                <Button
-                                    asChild
-                                    size="sm">
-                                    <Link href="#">
-                                        <span>Sign Up</span>
-                                    </Link>
-                                </Button>
+                                <PremiumButton
+                                    text="Get Started"
+                                />
                             </div>
                         </div>
                     </motion.div>

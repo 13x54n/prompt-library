@@ -87,9 +87,9 @@ export function PrimaryItemGrid({
           <GlobeDemo />
 
           <div className="space-y-1">
-            <h3 className="text-base font-medium">Build, Use, and Monetize dApps.</h3>
+            <h3 className="text-base font-medium">Marketplace for Solana dApps.</h3>
             <p className="text-muted-foreground text-sm whitespace-pre-line">
-              Build powerful dApps on our platform, connect them with MWA (Seeker Phone). Create, interact, and monitize for these experiences worldwide.
+              Build powerful dApps on our platform, connect them with MWA (Seeker Phone) for more advanced features. Create, interact, and get paid for your dApps.
             </p>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { SimpleMarketingPage } from '@/components/simple-marketing-page'
+import { HeroHeader } from '@/components/header'
 
 export const metadata: Metadata = {
     title: 'About',
@@ -8,9 +9,12 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
     return (
-        <SimpleMarketingPage
-            title="About"
-            description="Maple is building an agentic interface for Solana dApps: discovery, execution, and portfolio context in one place. We focus on clarity, safety, and developer-friendly tooling so teams can ship conversational experiences without sacrificing control."
-        />
+        <>
+            <HeroHeader />
+            <SimpleMarketingPage
+                title="About"
+                description="Maple is building an agentic interface for Solana dApps: discovery, execution, and portfolio context in one place. We focus on clarity, safety, and developer-friendly tooling so teams can ship conversational experiences without sacrificing control."
+            />
+        </>
     )
 }

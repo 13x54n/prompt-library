@@ -3,6 +3,7 @@ import HowItWorks from "@/components/how-it-works";
 import { InteractiveGridBackground } from "@/components/interactive-grid-background";
 import { StatsCards } from "@/components/stats-cards";
 import { PrimaryItemGridSection } from "@/components/flx/blocks/bento-grids/primary-item-grid/primary-item-grid-example";
+import { Hero01 } from "@/components/hero-01";
 
 
 export default function Home() {
@@ -92,6 +93,8 @@ export default function Home() {
 
       {/* </InteractiveGridBackground> */}
       <PrimaryItemGridSection />
+      
+      <Hero01/>
     </div>
   );
 }

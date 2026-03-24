@@ -5,7 +5,7 @@ export function PrimaryItemGridSection() {
     primary: {
       title: 'Agent Skills tailored for Solana Ecosystem.',
       description:
-        'Build smarter, faster workflows with agent capabilities designed for creating Solana dApps, protocols, and onchain actions. From understanding user needs to executing onchain actions, these skills help users interact with agentic interfaces.',
+        'RAG-based agentic interfaces, skills for Solana dApps, protocols, and onchain actions. From idea generation to dApp creation, users interact with agentic interfaces integrated with web3 skills.',
       cta: {
         ctaEnabled: true,
         text: 'Learn more.',
