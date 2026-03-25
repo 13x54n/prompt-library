@@ -6,13 +6,14 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { DASHBOARD_HOME_HREF } from "@/components/dashboard/dashboard-constants";
 
 export function MapleSidebarBrand() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <SidebarMenuButton size="lg" asChild>
-          <Link href="/dashboard" className="gap-0">
+          <Link href={DASHBOARD_HOME_HREF} className="gap-0">
             <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg text-sidebar-primary-foreground">
               <img
                 src="/logo.png"

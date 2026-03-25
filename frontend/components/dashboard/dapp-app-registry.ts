@@ -1,3 +1,9 @@
+import {
+  CATEGORY_LAUNCHER,
+  DEFAULT_CATEGORY_ID,
+  type CategoryId,
+} from "./dapp-marketplace-category-data";
+
 export type AppReview = {
   user: string;
   rating: number;
@@ -475,3 +481,17 @@ export function getAppDetail(slug: string): AppDetail | null {
 export function getAllAppSlugs(): string[] {
   return APP_DETAILS.map((a) => a.slug);
 }
+
+/** Full directory for dashboard home and similar views. */
+export function getAllAppDetails(): AppDetail[] {
+  return APP_DETAILS.slice();
+}
+
+/** Map storefront category label to browse route segment (e.g. for deep links). */
+export function categoryLabelToCategoryId(label: string): CategoryId {
+  const match = CATEGORY_LAUNCHER.find((c) => c.label === label);
+  if (match) return match.id;
+  if (label === "Wallet") return "infra";
+  return DEFAULT_CATEGORY_ID;
+}
+

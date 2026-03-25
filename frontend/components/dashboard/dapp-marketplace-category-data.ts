@@ -1,12 +1,9 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  Brain,
-  CircleDollarSign,
-  Gamepad2,
-  ImageIcon,
-  Server,
-  Users,
-} from "lucide-react";
+import { CircleDollarSignIcon } from "../ui/circle-dollar-sign";
+import { RouteIcon } from "../ui/route";
+import { ChessPawnIcon } from "../ui/chess-pawn";
+import { CpuIcon } from "../ui/cpu";
+import { UsersIcon } from "../ui/users";
+import { BrainIcon } from "../ui/brain";
 
 export type CategoryId =
   | "defi"
@@ -60,6 +57,15 @@ export type EditorialRow = {
 
 export type FavoriteRow = { name: string; cat: string; slug: string };
 
+/** Animated category chips: all use the same responsive wrapper + optional `size` prop. */
+export type CategoryLauncherIcon =
+  | typeof CircleDollarSignIcon
+  | typeof RouteIcon
+  | typeof ChessPawnIcon
+  | typeof CpuIcon
+  | typeof UsersIcon
+  | typeof BrainIcon;
+
 export type CategoryTabContent = {
   discoverTop: DiscoverRow[];
   editorialItems: EditorialRow[];
@@ -70,14 +76,14 @@ export type CategoryTabContent = {
 export const CATEGORY_LAUNCHER: {
   id: CategoryId;
   label: string;
-  icon: LucideIcon;
+  icon: CategoryLauncherIcon;
 }[] = [
-  { id: "defi", label: "DeFi", icon: CircleDollarSign },
-  { id: "nfts", label: "NFTs", icon: ImageIcon },
-  { id: "games", label: "Games", icon: Gamepad2 },
-  { id: "infra", label: "Infra", icon: Server },
-  { id: "social", label: "Social", icon: Users },
-  { id: "dao", label: "DAO", icon: Brain },
+  { id: "defi", label: "DeFi", icon: CircleDollarSignIcon },
+  { id: "nfts", label: "NFTs", icon: RouteIcon },
+  { id: "games", label: "Games", icon: ChessPawnIcon },
+  { id: "infra", label: "Infra", icon: CpuIcon },
+  { id: "social", label: "Social", icon: UsersIcon },
+  { id: "dao", label: "DAO", icon: BrainIcon },
 ];
 
 /** Shared imagery for editorial / featured cards (varied by category). */

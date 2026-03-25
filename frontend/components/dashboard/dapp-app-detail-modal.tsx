@@ -1,14 +1,21 @@
 "use client";
 
 import { Star } from "lucide-react";
+import { motion } from "motion/react";
 
 import { cn } from "@/lib/utils";
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  smoothDrawerItemVariants,
+  smoothDrawerVariants,
+} from "@/components/kokonutui/smooth-drawer";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import type { AppDetail } from "@/components/dashboard/dapp-app-registry";
+import { dashboardTypography } from "@/components/dashboard/dashboard-typography";
 
 const STORE_BLUE = "text-[#64B5FF]";
 const STORE_BLUE_BG = "bg-[#0A84FF]/18 hover:bg-[#0A84FF]/28";
@@ -70,10 +77,8 @@ function AppDetailScrollBody({ app }: { app: AppDetail }) {
               decoding="async"
             />
             <div className="min-w-0 flex-1 pb-0.5">
-              <p className="text-base font-bold leading-tight text-white sm:text-lg">
-                {app.name}
-              </p>
-              <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-white/80 sm:text-sm">
+              <p className={dashboardTypography.modalHeroTitle}>{app.name}</p>
+              <p className={dashboardTypography.modalHeroTagline}>
                 {app.tagline}
               </p>
             </div>
@@ -83,37 +88,35 @@ function AppDetailScrollBody({ app }: { app: AppDetail }) {
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/10 pb-4">
         <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold tabular-nums leading-none">
+          <span className={dashboardTypography.ratingScore}>
             {app.ratingAverage.toFixed(1)}
           </span>
           <div className="flex flex-col gap-0.5">
             <StarRating value={app.ratingAverage} />
-            <span className="text-muted-foreground text-xs">
+            <span className={dashboardTypography.status}>
               {app.ratingCount.toLocaleString()} ratings
             </span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-medium ring-1 ring-white/10">
+          <span className="rounded-full bg-white/[0.06] px-3 py-1 ring-1 ring-white/10 text-xs font-medium">
             {app.categoryLabel}
           </span>
-          <span className="text-muted-foreground text-xs">{app.developer}</span>
+          <span className={dashboardTypography.status}>{app.developer}</span>
         </div>
       </div>
 
       <section className="space-y-2">
-        <h2 className="text-base font-bold tracking-tight sm:text-lg">About</h2>
-        <p className="text-muted-foreground text-[15px] leading-relaxed">
-          {app.description}
-        </p>
+        <h2 className={dashboardTypography.drawerSection}>About</h2>
+        <p className={dashboardTypography.bodyMuted}>{app.description}</p>
       </section>
 
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-base font-bold tracking-tight sm:text-lg">
+          <h2 className={dashboardTypography.drawerSection}>
             Ratings & reviews
           </h2>
-          <span className="text-muted-foreground text-xs">
+          <span className={dashboardTypography.status}>
             {app.reviews.length} reviews
           </span>
         </div>
@@ -126,18 +129,22 @@ function AppDetailScrollBody({ app }: { app: AppDetail }) {
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <StarRating value={review.rating} size="sm" />
-                  <span className="truncate text-sm font-semibold">{review.title}</span>
+                  <span className={dashboardTypography.reviewTitle}>
+                    {review.title}
+                  </span>
                 </div>
-                <span className="text-muted-foreground text-xs">{review.date}</span>
+                <span className={dashboardTypography.status}>{review.date}</span>
               </div>
-              <p className="text-muted-foreground mb-1.5 text-xs">@{review.user}</p>
-              <p className="text-[14px] leading-relaxed sm:text-[15px]">{review.body}</p>
+              <p className={cn("mb-1.5", dashboardTypography.status)}>
+                @{review.user}
+              </p>
+              <p className={dashboardTypography.reviewBody}>{review.body}</p>
             </li>
           ))}
         </ul>
       </section>
 
-      <p className="text-muted-foreground text-center text-[11px] leading-relaxed">
+      <p className={dashboardTypography.footnote}>
         Maple listings are for discovery. Always verify programs and URLs before signing.
       </p>
     </div>
@@ -156,29 +163,47 @@ export function DappAppDetailModal({
   if (!app) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton
-        className="flex max-h-[min(92dvh,860px)] w-[min(calc(100vw-1.5rem),36rem)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:w-full"
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent
+        className={cn(
+          "mx-auto flex max-h-[min(92dvh,860px)] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-t-3xl border-t p-0",
+          "bg-background",
+        )}
       >
-        <DialogTitle className="sr-only">{app.name} — app details</DialogTitle>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <AppDetailScrollBody app={app} />
-        </div>
-        <div className="shrink-0 border-t border-white/10 bg-background/95 px-4 py-3 backdrop-blur-md sm:py-4">
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className={cn(
-              "flex w-full items-center justify-center rounded-full py-3 text-sm font-bold transition-colors",
-              STORE_BLUE_BG,
-              STORE_BLUE,
-            )}
+        <DrawerTitle className="sr-only">{app.name} — app details</DrawerTitle>
+        <motion.div
+          key={app.slug}
+          animate="visible"
+          className="flex min-h-0 flex-1 flex-col"
+          initial="hidden"
+          variants={smoothDrawerVariants}
+        >
+          <motion.div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            variants={smoothDrawerItemVariants}
           >
-            Done
-          </button>
-        </div>
-      </DialogContent>
-    </Dialog>
+            <AppDetailScrollBody app={app} />
+          </motion.div>
+          <motion.div
+            className="shrink-0 border-t border-white/10 bg-background/95 px-4 py-3 backdrop-blur-md sm:py-4"
+            variants={smoothDrawerItemVariants}
+          >
+            <DrawerClose asChild>
+              <button
+                type="button"
+                className={cn(
+                  "flex w-full items-center justify-center rounded-full py-3 transition-colors",
+                  dashboardTypography.cta,
+                  STORE_BLUE_BG,
+                  STORE_BLUE,
+                )}
+              >
+                Done
+              </button>
+            </DrawerClose>
+          </motion.div>
+        </motion.div>
+      </DrawerContent>
+    </Drawer>
   );
 }

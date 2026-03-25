@@ -10,6 +10,7 @@ import {
   CATEGORY_TAB_CONTENT,
   type CategoryId,
 } from "@/components/dashboard/dapp-marketplace-category-data";
+import { dashboardTypography } from "@/components/dashboard/dashboard-typography";
 
 /** iOS App Store–style accent (readable on dark UI) */
 const STORE_BLUE = "text-[#64B5FF]";
@@ -30,8 +31,10 @@ function GetLink({
   return (
     <Link
       href={dashboardAppHref(categoryId, slug)}
+      scroll={false}
       className={cn(
-        "inline-flex min-h-[44px] min-w-[4.75rem] shrink-0 items-center justify-center rounded-full px-4 text-xs font-bold transition-colors active:opacity-90 sm:min-h-8",
+        "inline-flex min-h-[44px] min-w-[4.75rem] shrink-0 items-center justify-center rounded-full px-4 transition-colors active:opacity-90 sm:min-h-8",
+        dashboardTypography.cta,
         STORE_BLUE_BG,
         STORE_BLUE,
       )}
@@ -52,16 +55,15 @@ function SectionHeader({
 }) {
   return (
     <div className="mb-3 flex items-end justify-between gap-3 px-0.5">
-      <h2
-        id={headingId}
-        className="text-xl font-bold leading-tight tracking-tight sm:text-[1.375rem] sm:leading-none"
-      >
+      <h2 id={headingId} className={dashboardTypography.sectionTitle}>
         {title}
       </h2>
       <Link
         href={seeAllHref ?? "#"}
+        scroll={seeAllHref ? false : undefined}
         className={cn(
-          "min-h-[44px] shrink-0 px-1 py-2 text-sm font-semibold leading-none sm:min-h-0 sm:p-0",
+          "min-h-[44px] shrink-0 px-1 py-2 sm:min-h-0 sm:p-0",
+          dashboardTypography.link,
           STORE_BLUE,
         )}
       >
@@ -87,6 +89,7 @@ function FeaturedStoryCard({
   return (
     <Link
       href={href}
+      scroll={false}
       className="group relative aspect-[3/4] w-[min(85vw,18rem)] max-w-sm shrink-0 snap-center overflow-hidden rounded-[1.35rem] bg-card ring-1 ring-white/10 transition-transform active:scale-[0.99] sm:aspect-[3/4] sm:w-full sm:max-w-none sm:snap-none sm:rounded-3xl sm:hover:scale-[1.01]"
     >
       <img
@@ -107,9 +110,9 @@ function FeaturedStoryCard({
             decoding="async"
           />
         </div>
-        <p className="text-lg font-bold leading-tight text-white">{label}</p>
+        <p className={dashboardTypography.featuredHeadline}>{label}</p>
         {subtitle ? (
-          <p className="mt-1 line-clamp-2 text-sm leading-snug text-white/75">
+          <p className={dashboardTypography.featuredSub}>
             {subtitle}
           </p>
         ) : null}
@@ -135,14 +138,13 @@ function AppListRow({
     <div className="flex min-h-[4.75rem] items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 pr-3 backdrop-blur-sm active:bg-white/[0.06] sm:min-h-[4.5rem] sm:gap-3 sm:pr-3.5">
       <Link
         href={dashboardAppHref(categoryId, slug)}
+        scroll={false}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none ring-offset-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-[#64B5FF]/50"
       >
         <img src={logo} alt="" className="size-[56px] shrink-0 rounded-[1.05rem] shadow-md ring-1 ring-white/10 sm:size-[60px] sm:rounded-[1.15rem]" />
         <div className="min-w-0 flex-1 text-left">
-          <p className="truncate text-[15px] font-semibold leading-tight">
-            {name}
-          </p>
-          <p className="text-muted-foreground mt-0.5 truncate text-[13px] sm:text-xs">{tag}</p>
+          <p className={dashboardTypography.listPrimary}>{name}</p>
+          <p className={dashboardTypography.listMeta}>{tag}</p>
         </div>
       </Link>
       <GetLink categoryId={categoryId} slug={slug} />
@@ -165,6 +167,7 @@ function FavouriteRow({
     <div className="flex min-h-[4.75rem] items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 pr-3 backdrop-blur-sm active:bg-white/[0.06] sm:min-h-[4.5rem] sm:gap-3 sm:pr-3.5">
       <Link
         href={dashboardAppHref(categoryId, slug)}
+        scroll={false}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none ring-offset-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-[#64B5FF]/50"
       >
         <div className="relative shrink-0">
@@ -172,10 +175,8 @@ function FavouriteRow({
           <WalletIcon className="text-muted-foreground absolute left-1/2 top-1/2 size-[22px] -translate-x-1/2 -translate-y-1/2" />
         </div>
         <div className="min-w-0 flex-1 text-left">
-          <p className="truncate text-[15px] font-semibold leading-tight">
-            {name}
-          </p>
-          <p className="text-muted-foreground mt-0.5 truncate text-xs">{cat}</p>
+          <p className={dashboardTypography.listPrimary}>{name}</p>
+          <p className={dashboardTypography.listMeta}>{cat}</p>
         </div>
       </Link>
       <GetLink categoryId={categoryId} slug={slug} />
@@ -223,7 +224,8 @@ export function CategoryMarketplaceBody({ categoryId }: { categoryId: CategoryId
           }))}
           className="overflow-hidden rounded-3xl ring-1 ring-white/10"
           ctaClassName={cn(
-            "inline-flex h-8 min-w-[4.5rem] shrink-0 items-center justify-center rounded-full px-4 text-xs font-bold transition-colors",
+            "inline-flex h-8 min-w-[4.5rem] shrink-0 items-center justify-center rounded-full px-4 transition-colors",
+            dashboardTypography.cta,
             STORE_BLUE_BG,
             STORE_BLUE,
           )}
@@ -274,7 +276,7 @@ export function CategoryMarketplaceBody({ categoryId }: { categoryId: CategoryId
       </section>
 
       <footer className="border-t border-white/10 pt-6 sm:pt-8">
-        <p className="text-muted-foreground text-center text-[11px] leading-relaxed sm:text-xs">
+        <p className={dashboardTypography.footnote}>
           The Maple dApp directory is curated for inspiration. Always verify
           contracts and links before signing.
         </p>

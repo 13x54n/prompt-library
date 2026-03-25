@@ -1,31 +1,15 @@
 "use client";
 
-import { AppSidebar } from "@/components/app-sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
 import { dashboardTypography } from "@/components/dashboard/dashboard-typography";
 import { DashboardDockNav } from "@/components/dashboard/dashboard-dock-nav";
 import { DashboardScrollRegion } from "@/components/dashboard/dashboard-scroll-region";
-import { DappMarketplaceDashboard } from "@/components/dashboard/dapp-marketplace-dashboard";
-import type { CategoryId } from "@/components/dashboard/dapp-marketplace-category-data";
+import { DashboardWalletMenu } from "@/components/dashboard/dapp-marketplace-dashboard";
 import { useWallet } from "@solana/wallet-adapter-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
-export function DashboardPageClient({ category }: { category: CategoryId }) {
+export function DashboardCreatePageClient() {
   const { connected, connecting, publicKey } = useWallet();
   const router = useRouter();
 
@@ -54,11 +38,24 @@ export function DashboardPageClient({ category }: { category: CategoryId }) {
 
   return (
     <SidebarProvider>
-      {/* <AppSidebar /> */}
       <SidebarInset>
         <DashboardScrollRegion>
           <div className="mx-auto w-full max-w-3xl px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 sm:pt-6 md:max-w-5xl md:px-8">
-            <DappMarketplaceDashboard address={address} category={category} />
+            <div className="relative min-h-full">
+              <div
+                className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_100%_55%_at_50%_-10%,oklch(0.52_0.16_264/0.12),transparent_50%),linear-gradient(to_bottom,oklch(0.12_0.01_264),var(--background))]"
+                aria-hidden
+              />
+              <header className="flex items-start justify-between gap-3 pb-6">
+                <div className="min-w-0 pt-0.5">
+                  <h1 className={dashboardTypography.pageTitle}>Create</h1>
+                  <p className={dashboardTypography.subtitle}>
+                    Build prompts, agents, and flows — this space is coming soon.
+                  </p>
+                </div>
+                <DashboardWalletMenu address={address} />
+              </header>
+            </div>
           </div>
         </DashboardScrollRegion>
         <DashboardDockNav />

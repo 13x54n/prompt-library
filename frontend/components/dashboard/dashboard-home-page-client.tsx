@@ -1,31 +1,15 @@
 "use client";
 
-import { AppSidebar } from "@/components/app-sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
 import { dashboardTypography } from "@/components/dashboard/dashboard-typography";
 import { DashboardDockNav } from "@/components/dashboard/dashboard-dock-nav";
+import { DashboardHome } from "@/components/dashboard/dashboard-home";
 import { DashboardScrollRegion } from "@/components/dashboard/dashboard-scroll-region";
-import { DappMarketplaceDashboard } from "@/components/dashboard/dapp-marketplace-dashboard";
-import type { CategoryId } from "@/components/dashboard/dapp-marketplace-category-data";
 import { useWallet } from "@solana/wallet-adapter-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
-export function DashboardPageClient({ category }: { category: CategoryId }) {
+export function DashboardHomePageClient() {
   const { connected, connecting, publicKey } = useWallet();
   const router = useRouter();
 
@@ -54,11 +38,10 @@ export function DashboardPageClient({ category }: { category: CategoryId }) {
 
   return (
     <SidebarProvider>
-      {/* <AppSidebar /> */}
       <SidebarInset>
         <DashboardScrollRegion>
           <div className="mx-auto w-full max-w-3xl px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 sm:pt-6 md:max-w-5xl md:px-8">
-            <DappMarketplaceDashboard address={address} category={category} />
+            <DashboardHome address={address} />
           </div>
         </DashboardScrollRegion>
         <DashboardDockNav />

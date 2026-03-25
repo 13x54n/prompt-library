@@ -30,6 +30,7 @@
     "@tailark": "https://tailark.com/r/{name}.json",
     "@shadcn-space": "https://shadcnspace.com/r/{name}.json",
     "@flx": "https://ui.flexnative.com/r/{name}.json",
-    "@ncdai": "https://chanhdai.com/r/{name}.json"
+    "@ncdai": "https://chanhdai.com/r/{name}.json",
+    "@kokonutui": "https://kokonutui.com/r/{name}.json"
   }
 }

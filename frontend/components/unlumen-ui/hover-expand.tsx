@@ -163,6 +163,7 @@ export function HoverExpand({
                       >
                         <Link
                           href={rowCtaHref}
+                          scroll={false}
                           className={
                             ctaClassName ??
                             DEFAULT_CTA_CLASS

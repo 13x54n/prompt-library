@@ -9,6 +9,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { DASHBOARD_HOME_HREF } from "@/components/dashboard/dashboard-constants";
 import {
   LayoutDashboardIcon,
   CompassIcon,
@@ -18,7 +19,7 @@ import {
 const mainLinks = [
   {
     title: "Discover",
-    href: "/dashboard",
+    href: DASHBOARD_HOME_HREF,
     icon: LayoutDashboardIcon,
   },
   {
@@ -45,8 +46,9 @@ export function MapleSidebarNav() {
             <SidebarMenuButton
               asChild
               isActive={
-                href === "/dashboard"
-                  ? pathname === "/dashboard"
+                href === DASHBOARD_HOME_HREF
+                  ? pathname === DASHBOARD_HOME_HREF ||
+                    pathname === "/dashboard"
                   : pathname.startsWith(href)
               }
               tooltip={title}
