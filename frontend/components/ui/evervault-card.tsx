@@ -5,10 +5,12 @@ import { useMotionTemplate, motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 export const EvervaultCard = ({
-  text,
+  appImage,
+  appLabel,
   className,
 }: {
-  text?: string;
+  appImage?: string;
+  appLabel?: string;
   className?: string;
 }) => {
   let mouseX = useMotionValue(0);
@@ -33,24 +35,22 @@ export const EvervaultCard = ({
   return (
     <div
       className={cn(
-        "p-0.5  bg-transparent aspect-square  flex items-center justify-center w-full h-full relative",
+        "bg-transparent flex items-center justify-center w-full h-full relative",
         className
       )}
     >
       <div
         onMouseMove={onMouseMove}
-        className="group/card rounded-3xl w-full relative overflow-hidden bg-transparent flex items-center justify-center h-full"
+        className="group/card rounded-3xl w-full relative overflow-hidden flex items-center justify-center h-full"
       >
         <CardPattern
           mouseX={mouseX}
           mouseY={mouseY}
           randomString={randomString}
         />
-        <div className="relative z-10 flex items-center justify-center">
-          <div className="relative h-44 w-44  rounded-full flex items-center justify-center text-white font-bold text-4xl">
-            {/* <div className="absolute w-full h-full bg-white/[0.8] dark:bg-black/[0.8] blur-sm rounded-full" /> */}
-            {/* <span className="dark:text-white text-black z-20">{text}</span> */}
-          </div>
+        <div className="relative z-10 flex items-center flex-col justify-center p-2">
+          <img src={appImage as string} alt={appLabel as string} className="w-auto h-24 object-contain" />
+          {/* <span className="dark:text-white text-black z-20 text-xs">{appLabel as string}</span> */}
         </div>
       </div>
     </div>

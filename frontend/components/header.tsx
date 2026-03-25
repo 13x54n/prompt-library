@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import React from 'react'
 import { useScroll, motion } from 'motion/react'
 import { cn } from '@/lib/utils'
-import PremiumButton from './premium-button'
+import { MapleWalletMultiButton } from '@/components/wallet/maple-wallet-multi-button'
 
 const menuItems = [
     // { name: 'Explore', href: '/explore' },
@@ -82,9 +82,7 @@ export const HeroHeader = () => {
                                 </ul>
                             </div>
                             <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-                                <PremiumButton
-                                    text="Get Started"
-                                />
+                                <MapleWalletMultiButton className="h-[44px] rounded-lg border border-neutral-800 bg-black px-4 text-sm font-medium text-white transition-transform hover:scale-[1.02] active:scale-[0.98]" />
                             </div>
                         </div>
                     </motion.div>

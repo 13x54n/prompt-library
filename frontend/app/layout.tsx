@@ -4,6 +4,10 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import FooterSection from "@/components/sections/footer/default";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { ConnectedDashboardRedirect } from "@/components/wallet/connected-dashboard-redirect";
+import { SolanaWalletProvider } from "@/components/wallet/solana-wallet-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
 
 const openSans = Open_Sans({
   subsets: ["latin"],
@@ -47,11 +51,16 @@ export default function RootLayout({
       className={`${openSans.variable} dark h-full font-sans antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ServiceWorkerRegister />
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
-        <FooterSection/>
+        <TooltipProvider>
+          <ServiceWorkerRegister />
+          <ThemeProvider>
+            <SolanaWalletProvider>
+              <ConnectedDashboardRedirect />
+              {children}
+            </SolanaWalletProvider>
+          </ThemeProvider>
+          <FooterSection />
+        </TooltipProvider>
       </body>
     </html>
   );
