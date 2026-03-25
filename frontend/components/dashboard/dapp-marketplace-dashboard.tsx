@@ -29,21 +29,21 @@ import { HoverExpand } from "@/components/unlumen-ui/hover-expand";
 
 const items = [
   {
-    label: "Kyoto",
+    label: "Jupiter",
     sublabel: "Get",
-
+    logo: "https://imgs.search.brave.com/VEvcOvt1TH152rqhypMcSltQxhmA9RPldcpedvGTiSA/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/YWxjaGVteS5jb20v/ZGFwcHMvX25leHQv/aW1hZ2U_dXJsPWh0/dHBzOi8vcmVzLmNs/b3VkaW5hcnkuY29t/L2FsY2hlbXktd2Vi/c2l0ZS9pbWFnZS91/cGxvYWQvdjE3MTA1/MzgyNzYvZGFwcC1z/dG9yZS9kYXBwLWxv/Z29zL0p1cGl0ZXIu/anBnJnc9NjQwJnE9/NzU",
     image: "https://images.unsplash.com/photo-1773546057870-ba1b62601d1e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
   },
   {
-    label: "Kyoto",
+    label: "Tensor",
     sublabel: "Get",
-
+    logo: "https://s2.coinmarketcap.com/static/img/coins/64x64/30449.png",
     image: "https://images.unsplash.com/photo-1774028156717-6b9f92babd2d?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
   },
   {
-    label: "Kyoto",
+    label: "Magic Eden",
     sublabel: "Get",
-
+    logo: "https://imgs.search.brave.com/yByfX8Rm004KJ-4awiUUSabyS2DTHrADM8RWttPthY0/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9yZXMu/Y2xvdWRpbmFyeS5j/b20vZGd2bnV3c3By/L2ltYWdlL3VwbG9h/ZC92MTY3OTkwMTQz/Ni9lYXJuLXNwb25z/b3JzL3JlY21LNllu/ejhITXBhNVdrLnBu/Zw",
     image: "https://images.unsplash.com/photo-1773929651401-04db346329dd?q=80&w=1035&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
   },
 ];
@@ -103,25 +103,6 @@ function WidgetHeader({
   );
 }
 
-const PLACEHOLDER_RECENTS = [
-  { title: "Swap SOL → USDC", sub: "Jupiter · mainnet", dot: "bg-sky-400" },
-  { title: "List NFT #2044", sub: "Tensor · listing", dot: "bg-violet-400" },
-  { title: "Stake SOL", sub: "Marinade · stake", dot: "bg-emerald-400" },
-] as const;
-
-const PLACEHOLDER_NEWS = [
-  {
-    title: "New: agent skills for Drift",
-    time: "Today",
-    snippet: "Execute perp intents with clearer risk labels…",
-  },
-  {
-    title: "Maple lightpaper v0.2",
-    time: "This week",
-    snippet: "How natural language maps to Solana transactions…",
-  },
-] as const;
-
 const LAUNCHER_APPS: { label: string; icon: LucideIcon }[] = [
   { label: "DeFi", icon: CircleDollarSign },
   { label: "NFTs", icon: ImageIcon },
@@ -152,26 +133,6 @@ const DISCOVER_TOP = [
   },
 ] as const;
 
-const FEATURED = [
-  {
-    tag: "SPOTLIGHT",
-    title: "Agentic swaps, one sentence",
-    desc: "Describe the trade; Maple proposes routes and safety checks before you sign.",
-    gradient: "from-[#1a3a52]/90 via-[#0f2840]/80 to-[#0a1628]/90",
-  },
-  {
-    tag: "NEW",
-    title: "dApp intents on Solana",
-    desc: "Chain natural language to wallet-standard adapters and MWA on mobile.",
-    gradient: "from-[#2d1f4e]/90 via-[#1a1240]/80 to-[#0a1628]/90",
-  },
-  {
-    tag: "BUILD",
-    title: "Marketplace for prompts",
-    desc: "Publish, discover, and monetize reusable agent skills for protocols.",
-    gradient: "from-[#1a4d3a]/90 via-[#0f3528]/80 to-[#0a1628]/90",
-  },
-] as const;
 
 const FAVORITES = [
   { name: "Marinade", cat: "Liquid staking", action: "Open" },

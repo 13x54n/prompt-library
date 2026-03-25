@@ -150,7 +150,7 @@ export function HoverExpand({
                       animate={{
                         color: isHovered
                           ? "rgba(0,0,0,1)"
-                          : "rgba(0,0,0,0.55)",
+                          : "rgba(0,0,0,1)",
                         opacity: isHovered ? 1 : 0.45,
                       }}
                       transition={{ duration: 0.2 }}
