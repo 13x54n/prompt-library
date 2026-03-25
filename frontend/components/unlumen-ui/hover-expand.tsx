@@ -115,16 +115,15 @@ export function HoverExpand({
                       />
                     </motion.div>
 
-                    <motion.span
-                      className="font-semibold tracking-tight truncate"
+                    <span
+                      className={cn(
+                        "font-semibold tracking-tight truncate transition-colors duration-200",
+                        isHovered ? "text-white" : "text-foreground",
+                      )}
                       style={{ fontSize: "clamp(1.1rem, 2.2vw, 1rem)" }}
-                      animate={{
-                        color: isHovered ? "#ffffff" : "currentColor",
-                      }}
-                      transition={{ duration: 0.2 }}
                     >
                       {item.label}
-                    </motion.span>
+                    </span>
 
                     {item.description && (
                       <motion.span
