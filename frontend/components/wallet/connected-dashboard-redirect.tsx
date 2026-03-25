@@ -4,26 +4,20 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-/** Paths allowed while connected (app + docs); marketing home redirects away. */
-const CONNECTED_ALLOWED_PREFIXES = [
-  "/dashboard",
-  "/explore",
-  "/whitepaper",
-  "/featured",
-  "/about",
-  "/privacy",
-  "/terms",
-] as const;
+import { DEFAULT_CATEGORY_ID } from "@/components/dashboard/dapp-marketplace-category-data";
+
+/** While connected, only `/dashboard` and nested routes (e.g. `/dashboard/defi`) are allowed. */
+const DASHBOARD_PREFIX = "/dashboard";
 
 function pathAllowedWhenConnected(pathname: string) {
-  return CONNECTED_ALLOWED_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  return (
+    pathname === DASHBOARD_PREFIX || pathname.startsWith(`${DASHBOARD_PREFIX}/`)
   );
 }
 
 /**
- * When a wallet is connected, send users to the app (not the marketing landing).
- * Allows dashboard, explore, lightpaper, and policy pages so the sidebar works.
+ * When a wallet is connected, keep the user in the dashboard app shell only.
+ * Visiting marketing or other app routes redirects to the default dashboard category.
  */
 export function ConnectedDashboardRedirect() {
   const { connected } = useWallet();
@@ -33,7 +27,7 @@ export function ConnectedDashboardRedirect() {
   useEffect(() => {
     if (!connected) return;
     if (pathAllowedWhenConnected(pathname)) return;
-    router.replace("/dashboard");
+    router.replace(`/dashboard/${DEFAULT_CATEGORY_ID}`);
   }, [connected, pathname, router]);
 
   return null;

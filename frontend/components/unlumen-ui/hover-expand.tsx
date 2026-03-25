@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { motion } from "motion/react";
 
 import { cn } from "@/lib/utils";
@@ -16,6 +17,8 @@ export interface HoverExpandItem {
   logoAlt?: string;
   /** short descriptor shown when expanded */
   description?: string;
+  /** Per-row GET link; wins over `HoverExpand` `ctaHref`. */
+  ctaHref?: string;
 }
 
 export interface HoverExpandProps {
@@ -31,26 +34,31 @@ export interface HoverExpandProps {
    */
   expandedHeight?: number;
   className?: string;
+  /** When set, the row CTA (item `sublabel`) renders as this link. */
+  ctaHref?: string;
+  /** Overrides default white CTA pill styles (e.g. match surrounding GET buttons). */
+  ctaClassName?: string;
 }
+
+const DEFAULT_CTA_CLASS =
+  "text-xs tracking-widest uppercase shrink-0 bg-white text-black px-2 py-1 rounded-md border-none cursor-pointer";
 
 export function HoverExpand({
   items,
   collapsedHeight = 68,
   expandedHeight = 320,
   className,
+  ctaHref,
+  ctaClassName,
 }: HoverExpandProps) {
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
 
   return (
-    <div className={cn("flex flex-col w-full", className)}>
-      <h2 className="font-semibold tracking-tight">
-        ✨ Featured on Maple
-      </h2>
-      <div className="w-full  border-current opacity-15" />
-
+    <div className={cn("flex w-full flex-col", className)}>
       {items.map((item, i) => {
         const isHovered = hoveredIndex === i;
         const isOtherHovered = hoveredIndex !== null && !isHovered;
+        const rowCtaHref = item.ctaHref ?? ctaHref;
 
         return (
           <React.Fragment key={i}>
@@ -145,18 +153,36 @@ export function HoverExpand({
                   </div>
 
                   {item.sublabel && (
-                    <motion.button
-                      className="text-xs tracking-widest uppercase shrink-0 bg-white text-black px-2 py-1 rounded-md border-none cursor-pointer"
-                      animate={{
-                        color: isHovered
-                          ? "rgba(0,0,0,1)"
-                          : "rgba(0,0,0,1)",
-                        opacity: isHovered ? 1 : 0.45,
-                      }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {item.sublabel}
-                    </motion.button>
+                    rowCtaHref ? (
+                      <motion.div
+                        className="shrink-0"
+                        animate={{
+                          opacity: isHovered ? 1 : 0.45,
+                        }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <Link
+                          href={rowCtaHref}
+                          className={
+                            ctaClassName ??
+                            DEFAULT_CTA_CLASS
+                          }
+                        >
+                          {item.sublabel}
+                        </Link>
+                      </motion.div>
+                    ) : (
+                      <motion.button
+                        type="button"
+                        className={cn(DEFAULT_CTA_CLASS, ctaClassName)}
+                        animate={{
+                          opacity: isHovered ? 1 : 0.45,
+                        }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {item.sublabel}
+                      </motion.button>
+                    )
                   )}
                 </div>
               </div>

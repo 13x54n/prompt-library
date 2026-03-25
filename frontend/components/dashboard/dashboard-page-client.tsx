@@ -16,12 +16,13 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { DappMarketplaceDashboard } from "@/components/dashboard/dapp-marketplace-dashboard";
+import type { CategoryId } from "@/components/dashboard/dapp-marketplace-category-data";
 import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-export function DashboardPageClient() {
+export function DashboardPageClient({ category }: { category: CategoryId }) {
   const { connected, connecting, publicKey } = useWallet();
   const router = useRouter();
 
@@ -50,33 +51,11 @@ export function DashboardPageClient() {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      {/* <AppSidebar /> */}
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
-            {/* <SidebarTrigger className="-ml-1" /> */}
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink asChild>
-                    <Link href="/dashboard">Maple</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Discover</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-        </header>
-        <div className="flex flex-1 flex-col overflow-auto">
-          <div className="p-4 pt-5 md:p-6 md:pt-6">
-            <DappMarketplaceDashboard address={address} />
+        <div className="flex min-h-[100dvh] flex-1 flex-col overflow-auto">
+          <div className="mx-auto w-full max-w-3xl px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 sm:pt-6 md:max-w-5xl md:px-8">
+            <DappMarketplaceDashboard address={address} category={category} />
           </div>
         </div>
       </SidebarInset>

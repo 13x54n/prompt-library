@@ -104,3 +104,11 @@
 @utility screen-line-bottom {
     @apply relative after:absolute after:bottom-0 after:-left-[100vw] after:-z-1 after:h-px after:w-[200vw] after:bg-line;
 }
+
+/** Mobile storefront: hide horizontal scrollbars for category / carousel rows */
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

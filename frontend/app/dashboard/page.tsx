@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { DashboardPageClient } from "@/components/dashboard/dashboard-page-client";
+import { redirect } from "next/navigation";
+
+import { DEFAULT_CATEGORY_ID } from "@/components/dashboard/dapp-marketplace-category-data";
 
 export const metadata: Metadata = {
   title: "Dashboard · Maple",
@@ -7,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardPage() {
-  return <DashboardPageClient />;
+  redirect(`/dashboard/${DEFAULT_CATEGORY_ID}`);
 }

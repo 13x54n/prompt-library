@@ -1,262 +1,173 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  BookOpenIcon,
-  Brain,
-  CircleDollarSign,
-  CompassIcon,
-  Gamepad2,
-  ImageIcon,
-  LayoutGridIcon,
-  MoreHorizontalIcon,
-  PlusIcon,
-  SearchIcon,
-  Server,
-  SparklesIcon,
-  TrendingUpIcon,
-  Users,
-  WalletIcon,
-  ZapIcon,
-} from "lucide-react";
+import { Suspense } from "react";
+
+import { useWallet } from "@solana/wallet-adapter-react";
+import { CopyIcon, LogOutIcon } from "lucide-react";
 import Link from "next/link";
 
-import { HoverExpand } from "@/components/unlumen-ui/hover-expand";
+import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-const items = [
-  {
-    label: "Jupiter",
-    sublabel: "Get",
-    logo: "https://imgs.search.brave.com/VEvcOvt1TH152rqhypMcSltQxhmA9RPldcpedvGTiSA/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/YWxjaGVteS5jb20v/ZGFwcHMvX25leHQv/aW1hZ2U_dXJsPWh0/dHBzOi8vcmVzLmNs/b3VkaW5hcnkuY29t/L2FsY2hlbXktd2Vi/c2l0ZS9pbWFnZS91/cGxvYWQvdjE3MTA1/MzgyNzYvZGFwcC1z/dG9yZS9kYXBwLWxv/Z29zL0p1cGl0ZXIu/anBnJnc9NjQwJnE9/NzU",
-    image: "https://images.unsplash.com/photo-1773546057870-ba1b62601d1e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  },
-  {
-    label: "Tensor",
-    sublabel: "Get",
-    logo: "https://s2.coinmarketcap.com/static/img/coins/64x64/30449.png",
-    image: "https://images.unsplash.com/photo-1774028156717-6b9f92babd2d?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  },
-  {
-    label: "Magic Eden",
-    sublabel: "Get",
-    logo: "https://imgs.search.brave.com/yByfX8Rm004KJ-4awiUUSabyS2DTHrADM8RWttPthY0/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9yZXMu/Y2xvdWRpbmFyeS5j/b20vZGd2bnV3c3By/L2ltYWdlL3VwbG9h/ZC92MTY3OTkwMTQz/Ni9lYXJuLXNwb25z/b3JzL3JlY21LNllu/ejhITXBhNVdrLnBu/Zw",
-    image: "https://images.unsplash.com/photo-1773929651401-04db346329dd?q=80&w=1035&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  },
-];
+import { AppDetailModalHost } from "@/components/dashboard/app-detail-modal-host";
+import { CATEGORY_PAGE_COMPONENT } from "@/components/dashboard/category-pages/category-page-registry";
+import {
+  CATEGORY_LAUNCHER,
+  type CategoryId,
+} from "@/components/dashboard/dapp-marketplace-category-data";
 
-function GlassPanel({
-  className,
-  children,
-}: {
-  className?: string;
-  children: ReactNode;
-}) {
+/** Varying min widths on larger screens; mobile uses horizontal snap row */
+const CATEGORY_CHIP_MIN_W = [
+  "min-w-[6.75rem]",
+  "min-w-[7.5rem]",
+  "min-w-[6rem]",
+  "min-w-[8rem]",
+  "min-w-[5.75rem]",
+  "min-w-[7.25rem]",
+] as const;
+
+const DASHBOARD_BASE = "/dashboard";
+
+export function DashboardWalletMenu({ address }: { address: string }) {
+  const { disconnect, publicKey } = useWallet();
+  const full = publicKey?.toBase58() ?? address;
+  const initials = full.slice(0, 2).toUpperCase();
+
   return (
-    <div
-      className={cn(
-        "flex flex-col rounded-2xl border border-white/[0.08] bg-white/[0.04] shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-
-function WidgetHeader({
-  icon: Icon,
-  title,
-  badge,
-  action,
-}: {
-  icon: LucideIcon;
-  title: string;
-  badge?: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2  px-4">
-      <div className="flex min-w-0 items-center gap-2">
-
-        <h2 className="font-semibold tracking-tight">📦 {title}</h2>
-        {badge ? (
-          <span className="text-muted-foreground hidden shrink-0 text-xs sm:inline">
-            {badge}
-          </span>
-        ) : null}
-      </div>
-      <div className="flex items-center gap-1">
-        {action}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="text-muted-foreground hover:text-foreground rounded-md p-1.5 transition-colors"
-          aria-label="More"
+          className={cn(
+            "flex size-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-bold tracking-wide ring-1 ring-white/15",
+            "cursor-pointer outline-none transition-[transform,box-shadow] active:scale-[0.98]",
+            "focus-visible:ring-2 focus-visible:ring-[#64B5FF]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          )}
+          aria-label="Account menu"
         >
-          <MoreHorizontalIcon className="size-4" />
+          {initials}
         </button>
-      </div>
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        side="bottom"
+        sideOffset={8}
+        className="w-[min(calc(100vw-2rem),20rem)] rounded-2xl p-1.5 shadow-lg ring-1 ring-white/10"
+      >
+        <DropdownMenuLabel className="p-0 font-normal">
+          <div className="flex flex-col gap-1.5 px-2 py-2 text-left">
+            <span className="text-muted-foreground text-[11px] font-medium uppercase tracking-wider">
+              Connected wallet
+            </span>
+            <span className="font-mono text-xs leading-snug break-all text-foreground/90">
+              {full}
+            </span>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="cursor-pointer rounded-xl py-2.5"
+          onClick={() => void navigator.clipboard.writeText(full)}
+        >
+          <CopyIcon className="size-4" />
+          Copy address
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          variant="destructive"
+          className="cursor-pointer rounded-xl py-2.5"
+          onClick={() => {
+            void disconnect();
+          }}
+        >
+          <LogOutIcon className="size-4" />
+          Disconnect
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
-const LAUNCHER_APPS: { label: string; icon: LucideIcon }[] = [
-  { label: "DeFi", icon: CircleDollarSign },
-  { label: "NFTs", icon: ImageIcon },
-  { label: "Games", icon: Gamepad2 },
-  { label: "Infra", icon: Server },
-  { label: "Social", icon: Users },
-  { label: "DAO", icon: Brain },
-];
-
-const DISCOVER_TOP = [
-  {
-    name: "Jupiter",
-    tag: "DEX · Aggregator",
-    action: "Open",
-    icon: "bg-gradient-to-br from-cyan-400/80 to-blue-600/80",
-  },
-  {
-    name: "Tensor",
-    tag: "NFT Marketplace",
-    action: "Open",
-    icon: "bg-gradient-to-br from-violet-400/80 to-fuchsia-700/80",
-  },
-  {
-    name: "Phantom",
-    tag: "Wallet",
-    action: "Open",
-    icon: "bg-gradient-to-br from-purple-400/80 to-indigo-700/80",
-  },
-] as const;
-
-
-const FAVORITES = [
-  { name: "Marinade", cat: "Liquid staking", action: "Open" },
-  { name: "Drift", cat: "Perps", action: "Open" },
-  { name: "Meteora", cat: "Liquidity", action: "Open" },
-] as const;
-
-function shortAddr(a: string) {
-  return `${a.slice(0, 4)}…${a.slice(-4)}`;
-}
-
-export function DappMarketplaceDashboard({ address }: { address: string }) {
-  const initials = address.slice(0, 2).toUpperCase();
+export function DappMarketplaceDashboard({
+  address,
+  category,
+}: {
+  address: string;
+  category: CategoryId;
+}) {
+  const CategoryPage = CATEGORY_PAGE_COMPONENT[category];
 
   return (
     <div className="relative min-h-full">
       <div
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(59,130,246,0.12),transparent_50%),radial-gradient(ellipse_80%_50%_at_100%_50%,rgba(139,92,246,0.08),transparent_45%),linear-gradient(to_bottom,#0a0c12,var(--background))]"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_100%_55%_at_50%_-10%,oklch(0.52_0.16_264/0.12),transparent_50%),linear-gradient(to_bottom,oklch(0.15_0.01_264),var(--background))]"
         aria-hidden
       />
 
-      <div className="mx-auto flex max-w-6xl flex-col gap-10 pb-12">
-
-
-        <section className="space-y-4">
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <HoverExpand items={items} />
-
-            <div>
-              <WidgetHeader icon={LayoutGridIcon} title="Categories" />
-              <div className="grid grid-cols-4 gap-2 p-4 sm:grid-cols-4">
-                {LAUNCHER_APPS.map((app) => {
-                  const Icon = app.icon;
-                  return (
-                    <div
-                      key={app.label}
-                      className="flex flex-col items-center justify-center border border-white/[0.06] p-1 px-4 pb-2"
-                    >
-                      <p className="flex items-center gap-2 text-sm">
-                        <Icon
-                          className="size-[18px] shrink-0 text-current"
-                          aria-hidden
-                        />
-                        {app.label}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
+      <div className="flex flex-col gap-6 sm:gap-8 md:gap-10 md:pb-2">
+        {/* App Store–style masthead: sticky frosted bar on mobile */}
+        <header className="sticky top-0 z-30 -mx-4 border-b border-white/[0.07] bg-background/75 px-4 pb-3 pt-1 backdrop-blur-xl supports-[backdrop-filter]:bg-background/55 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 pt-0.5">
+              <p className="text-muted-foreground mb-0.5 text-[11px] font-semibold uppercase tracking-[0.2em] sm:text-xs">
+                Maple
+              </p>
+              <h1 className="text-[1.625rem] font-bold leading-[1.08] tracking-tight sm:text-[2.125rem] md:text-[2.5rem]">
+                Today
+              </h1>
             </div>
+            <DashboardWalletMenu address={address} />
           </div>
-        </section>
+        </header>
 
-        {/* App Store–style rows */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Top picks for you
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {DISCOVER_TOP.map((app) => (
-              <GlassPanel key={app.name} className="overflow-hidden">
-                <div className="flex items-start gap-3 p-4">
-                  <div
-                    className={cn(
-                      "size-14 shrink-0 rounded-2xl shadow-inner ring-1 ring-white/10",
-                      app.icon,
-                    )}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold leading-tight">{app.name}</p>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      {app.tag}
-                    </p>
-                    <Button
-                      size="sm"
-                      className="mt-3 h-8 rounded-full px-4 text-xs"
-                      variant="secondary"
-                      asChild
-                    >
-                      <Link href="/explore">{app.action}</Link>
-                    </Button>
-                  </div>
-                </div>
-              </GlassPanel>
-            ))}
+        {/* Categories: horizontal snap strip on phones (App Store–style), wrap on md+ */}
+        <nav className="-mx-4 sm:mx-0" aria-label="Categories">
+          <div
+            className={cn(
+              "scrollbar-hide flex gap-2 overflow-x-auto px-4 pb-1 pt-0.5",
+              "snap-x snap-mandatory sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 sm:pt-0",
+            )}
+          >
+            {CATEGORY_LAUNCHER.map((app, i) => {
+              const Icon = app.icon;
+              const active = category === app.id;
+              return (
+                <Link
+                  href={`${DASHBOARD_BASE}/${app.id}`}
+                  key={app.id}
+                  scroll={false}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex min-h-[44px] shrink-0 snap-start items-center justify-center gap-2 rounded-full border px-3.5 py-2.5 text-[13px] font-semibold leading-none ring-white/5 transition-colors active:scale-[0.98] sm:min-h-0 sm:px-3 sm:py-2 sm:text-sm",
+                    CATEGORY_CHIP_MIN_W[i % CATEGORY_CHIP_MIN_W.length],
+                    active
+                      ? "border-[#64B5FF]/45 bg-[#0A84FF]/22 text-[#64B5FF] ring-1 ring-[#64B5FF]/35"
+                      : "border-white/10 bg-white/[0.06] active:bg-white/15 sm:hover:bg-white/[0.09]",
+                  )}
+                >
+                  <Icon className="size-[18px] shrink-0 opacity-90 sm:size-4" aria-hidden />
+                  {app.label}
+                </Link>
+              );
+            })}
           </div>
-        </section>
+        </nav>
 
-
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold tracking-tight">
-              Favourites
-            </h2>
-            <Link
-              href="/explore"
-              className="text-primary text-sm font-medium hover:underline"
-            >
-              See all
-            </Link>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {FAVORITES.map((app) => (
-              <GlassPanel key={app.name}>
-                <div className="flex items-center justify-between gap-3 p-4">
-                  <div className="relative">
-                    <div className="size-12 rounded-2xl bg-gradient-to-br from-white/15 to-white/5 ring-1 ring-white/10" />
-                    <WalletIcon className="text-muted-foreground absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium leading-tight">{app.name}</p>
-                    <p className="text-muted-foreground text-xs">{app.cat}</p>
-                  </div>
-                  <Button size="sm" variant="outline" className="rounded-full" asChild>
-                    <Link href="/explore">{app.action}</Link>
-                  </Button>
-                </div>
-              </GlassPanel>
-            ))}
-          </div>
-        </section>
+        <div className="flex flex-col gap-8 sm:gap-10">
+          <CategoryPage />
+        </div>
       </div>
+
+      <Suspense fallback={null}>
+        <AppDetailModalHost category={category} />
+      </Suspense>
     </div>
   );
 }

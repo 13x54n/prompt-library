@@ -36,7 +36,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#3d6b4a",
+  /** Dark chrome for storefront-style UI (matches --background) */
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#252525" },
+    { color: "#f5f5f5" },
+  ],
 };
 
 export default function RootLayout({
@@ -59,7 +63,7 @@ export default function RootLayout({
               {children}
             </SolanaWalletProvider>
           </ThemeProvider>
-          <FooterSection />
+          {/* <FooterSection /> */}
         </TooltipProvider>
       </body>
     </html>
