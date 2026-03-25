@@ -1,7 +1,12 @@
 "use client";
 
-import { CategoryMarketplaceBody } from "@/components/dashboard/category-pages/category-marketplace-body";
+import {
+  CategoryMarketplaceBody,
+  type CategoryExplorePageProps,
+} from "@/components/dashboard/category-pages/category-marketplace-body";
 
-export function InfraCategoryPage() {
-  return <CategoryMarketplaceBody categoryId="infra" />;
+export function InfraCategoryPage({ searchQuery }: CategoryExplorePageProps = {}) {
+  return (
+    <CategoryMarketplaceBody categoryId="infra" searchQuery={searchQuery} />
+  );
 }

@@ -78,6 +78,7 @@ export function DashboardDockNav() {
           "dark:border-white/12 dark:bg-[rgba(28,28,30,0.55)]",
         )}
       >
+        <img src="/logo.png" alt="Logo" width={30} height={30} className="w-8 h-8 mr-1" />
         <DockItem
           href={DASHBOARD_HOME_HREF}
           icon={HomeIcon}

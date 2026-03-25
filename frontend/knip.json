@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "tags": [
+    "-lintignore"
+  ],
+  "ignore": [
+    "public/sw.js"
+  ],
+  "rules": {
+    "exports": "off",
+    "types": "off"
+  }
+}

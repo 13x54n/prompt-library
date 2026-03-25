@@ -12,7 +12,8 @@ export type AppReview = {
   body: string;
 };
 
-export type AppDetail = {
+/** Stored storefront row (launch URL merged in getters). */
+export type AppDetailRow = {
   slug: string;
   name: string;
   tagline: string;
@@ -25,6 +26,9 @@ export type AppDetail = {
   ratingCount: number;
   reviews: AppReview[];
 };
+
+/** Full app record including URL used by Home launcher iframe. */
+export type AppDetail = AppDetailRow & { siteUrl: string };
 
 const U1 =
   "https://images.unsplash.com/photo-1773546057870-ba1b62601d1e?q=80&w=1200&auto=format&fit=crop";
@@ -88,7 +92,7 @@ function app(
   ratingAverage: number,
   ratingCount: number,
   seed: number,
-): AppDetail {
+): AppDetailRow {
   return {
     slug,
     name,
@@ -104,8 +108,59 @@ function app(
   };
 }
 
+/** Public web URLs for embedding in Home launcher (many sites block iframes; still the right UX). */
+const SITE_URL_BY_SLUG: Record<string, string> = {
+  jupiter: "https://jup.ag",
+  tensor: "https://www.tensor.trade",
+  "magic-eden": "https://magiceden.io",
+  phantom: "https://phantom.app",
+  marinade: "https://marinade.finance",
+  drift: "https://app.drift.trade",
+  meteora: "https://app.meteora.ag",
+  "star-atlas": "https://staratlas.com",
+  aurory: "https://aurory.io",
+  "defi-land": "https://defiland.app",
+  step: "https://step.app",
+  genopets: "https://www.genopets.me",
+  "mini-royale": "https://miniroyale.io",
+  helius: "https://www.helius.dev",
+  quicknode: "https://www.quicknode.com",
+  triton: "https://triton.one",
+  genesysgo: "https://genesysgo.com",
+  shyft: "https://shyft.to",
+  ironforge: "https://ironforge.cloud",
+  dialect: "https://dialect.to",
+  access: "https://solana.com",
+  grape: "https://grape.gg",
+  bonfida: "https://bonfida.org",
+  "solana-id": "https://solana.id",
+  wordcel: "https://wordcel.club",
+  realms: "https://realms.today",
+  squads: "https://squads.xyz",
+  streamflow: "https://streamflow.finance",
+};
+
+function enrich(row: AppDetailRow): AppDetail {
+  return {
+    ...row,
+    siteUrl: SITE_URL_BY_SLUG[row.slug] ?? "https://example.com",
+  };
+}
+
+/** Slugs the signed-in user has purchased / installed (Home library only). */
+export const PURCHASED_APP_SLUGS: readonly string[] = [
+  "jupiter",
+  "phantom",
+  "tensor",
+  "marinade",
+  "drift",
+  "meteora",
+  "magic-eden",
+  "helius",
+];
+
 /** Curated storefront metadata + reviews (Maple directory is illustrative). */
-const APP_DETAILS: AppDetail[] = [
+const APP_DETAILS: AppDetailRow[] = [
   app(
     "jupiter",
     "Jupiter",
@@ -475,16 +530,30 @@ const APP_DETAILS: AppDetail[] = [
 const BY_SLUG = new Map(APP_DETAILS.map((a) => [a.slug, a]));
 
 export function getAppDetail(slug: string): AppDetail | null {
-  return BY_SLUG.get(slug) ?? null;
+  const row = BY_SLUG.get(slug);
+  return row ? enrich(row) : null;
 }
 
 export function getAllAppSlugs(): string[] {
   return APP_DETAILS.map((a) => a.slug);
 }
 
-/** Full directory for dashboard home and similar views. */
+/** Full marketplace directory (Explore). */
 export function getAllAppDetails(): AppDetail[] {
-  return APP_DETAILS.slice();
+  return APP_DETAILS.map(enrich);
+}
+
+/** Purchased / installed apps for the Home launcher grid. */
+export function getPurchasedAppDetails(): AppDetail[] {
+  const seen = new Set<string>();
+  const out: AppDetail[] = [];
+  for (const slug of PURCHASED_APP_SLUGS) {
+    if (seen.has(slug)) continue;
+    seen.add(slug);
+    const row = BY_SLUG.get(slug);
+    if (row) out.push(enrich(row));
+  }
+  return out;
 }
 
 /** Map storefront category label to browse route segment (e.g. for deep links). */
@@ -492,6 +561,7 @@ export function categoryLabelToCategoryId(label: string): CategoryId {
   const match = CATEGORY_LAUNCHER.find((c) => c.label === label);
   if (match) return match.id;
   if (label === "Wallet") return "infra";
+  if (label === "NFTs") return "defi";
   return DEFAULT_CATEGORY_ID;
 }
 

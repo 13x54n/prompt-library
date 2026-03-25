@@ -1,13 +1,11 @@
-import { CircleDollarSignIcon } from "../ui/circle-dollar-sign";
-import { RouteIcon } from "../ui/route";
+import { BrainIcon } from "../ui/brain";
 import { ChessPawnIcon } from "../ui/chess-pawn";
+import { CircleDollarSignIcon } from "../ui/circle-dollar-sign";
 import { CpuIcon } from "../ui/cpu";
 import { UsersIcon } from "../ui/users";
-import { BrainIcon } from "../ui/brain";
 
 export type CategoryId =
   | "defi"
-  | "nfts"
   | "games"
   | "infra"
   | "social"
@@ -17,7 +15,6 @@ export const DEFAULT_CATEGORY_ID: CategoryId = "defi";
 
 const CATEGORY_SET = new Set<CategoryId>([
   "defi",
-  "nfts",
   "games",
   "infra",
   "social",
@@ -60,7 +57,6 @@ export type FavoriteRow = { name: string; cat: string; slug: string };
 /** Animated category chips: all use the same responsive wrapper + optional `size` prop. */
 export type CategoryLauncherIcon =
   | typeof CircleDollarSignIcon
-  | typeof RouteIcon
   | typeof ChessPawnIcon
   | typeof CpuIcon
   | typeof UsersIcon
@@ -79,7 +75,6 @@ export const CATEGORY_LAUNCHER: {
   icon: CategoryLauncherIcon;
 }[] = [
   { id: "defi", label: "DeFi", icon: CircleDollarSignIcon },
-  { id: "nfts", label: "NFTs", icon: RouteIcon },
   { id: "games", label: "Games", icon: ChessPawnIcon },
   { id: "infra", label: "Infra", icon: CpuIcon },
   { id: "social", label: "Social", icon: UsersIcon },
@@ -146,48 +141,6 @@ const FAVORITES_DEFI: FavoriteRow[] = [
   { name: "Marinade", cat: "Liquid staking", slug: "marinade" },
   { name: "Drift", cat: "Perps", slug: "drift" },
   { name: "Meteora", cat: "Liquidity", slug: "meteora" },
-];
-
-const DISCOVER_NFTS: DiscoverRow[] = [
-  { name: "Tensor", tag: "Pro trading", logo: L_TENSOR, slug: "tensor" },
-  { name: "Magic Eden", tag: "Marketplace", logo: L_ME, slug: "magic-eden" },
-  { name: "Phantom", tag: "Collectibles", logo: L_PH, slug: "phantom" },
-  { name: "Tensor", tag: "Rarity tools", logo: L_TENSOR, slug: "tensor" },
-  { name: "Magic Eden", tag: "Launchpad", logo: L_ME, slug: "magic-eden" },
-  { name: "Tensor", tag: "Bids", logo: L_TENSOR, slug: "tensor" },
-];
-
-const EDITORIAL_NFTS: EditorialRow[] = [
-  {
-    label: "Tensor",
-    sublabel: "GET",
-    logo: L_TENSOR,
-    image: U2,
-    description: "Trade NFTs with pro tools",
-    slug: "tensor",
-  },
-  {
-    label: "Magic Eden",
-    sublabel: "GET",
-    logo: L_ME,
-    image: U3,
-    description: "Discover collections & drops",
-    slug: "magic-eden",
-  },
-  {
-    label: "Phantom",
-    sublabel: "GET",
-    logo: L_PH,
-    image: U1,
-    description: "Hold your collectibles in one place",
-    slug: "phantom",
-  },
-];
-
-const FAVORITES_NFTS: FavoriteRow[] = [
-  { name: "Tensor", cat: "Trading", slug: "tensor" },
-  { name: "Magic Eden", cat: "Marketplace", slug: "magic-eden" },
-  { name: "Phantom", cat: "Wallet", slug: "phantom" },
 ];
 
 const DISCOVER_GAMES: DiscoverRow[] = [
@@ -364,12 +317,6 @@ export const CATEGORY_TAB_CONTENT: Record<CategoryId, CategoryTabContent> = {
     editorialItems: EDITORIAL_DEFI,
     featuredNew: EDITORIAL_DEFI,
     favorites: FAVORITES_DEFI,
-  },
-  nfts: {
-    discoverTop: DISCOVER_NFTS,
-    editorialItems: EDITORIAL_NFTS,
-    featuredNew: EDITORIAL_NFTS,
-    favorites: FAVORITES_NFTS,
   },
   games: {
     discoverTop: DISCOVER_GAMES,

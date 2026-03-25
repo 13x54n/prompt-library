@@ -1,7 +1,12 @@
 "use client";
 
-import { CategoryMarketplaceBody } from "@/components/dashboard/category-pages/category-marketplace-body";
+import {
+  CategoryMarketplaceBody,
+  type CategoryExplorePageProps,
+} from "@/components/dashboard/category-pages/category-marketplace-body";
 
-export function SocialCategoryPage() {
-  return <CategoryMarketplaceBody categoryId="social" />;
+export function SocialCategoryPage({ searchQuery }: CategoryExplorePageProps = {}) {
+  return (
+    <CategoryMarketplaceBody categoryId="social" searchQuery={searchQuery} />
+  );
 }

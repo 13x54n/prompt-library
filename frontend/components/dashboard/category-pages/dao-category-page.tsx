@@ -1,7 +1,12 @@
 "use client";
 
-import { CategoryMarketplaceBody } from "@/components/dashboard/category-pages/category-marketplace-body";
+import {
+  CategoryMarketplaceBody,
+  type CategoryExplorePageProps,
+} from "@/components/dashboard/category-pages/category-marketplace-body";
 
-export function DaoCategoryPage() {
-  return <CategoryMarketplaceBody categoryId="dao" />;
+export function DaoCategoryPage({ searchQuery }: CategoryExplorePageProps = {}) {
+  return (
+    <CategoryMarketplaceBody categoryId="dao" searchQuery={searchQuery} />
+  );
 }

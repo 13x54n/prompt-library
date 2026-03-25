@@ -5,15 +5,16 @@ import { DaoCategoryPage } from "@/components/dashboard/category-pages/dao-categ
 import { DefiCategoryPage } from "@/components/dashboard/category-pages/defi-category-page";
 import { GamesCategoryPage } from "@/components/dashboard/category-pages/games-category-page";
 import { InfraCategoryPage } from "@/components/dashboard/category-pages/infra-category-page";
-import { NftsCategoryPage } from "@/components/dashboard/category-pages/nfts-category-page";
 import { SocialCategoryPage } from "@/components/dashboard/category-pages/social-category-page";
+import type { CategoryExplorePageProps } from "@/components/dashboard/category-pages/category-marketplace-body";
+
+export type { CategoryExplorePageProps };
 
 export const CATEGORY_PAGE_COMPONENT: Record<
   CategoryId,
-  ComponentType
+  ComponentType<CategoryExplorePageProps>
 > = {
   defi: DefiCategoryPage,
-  nfts: NftsCategoryPage,
   games: GamesCategoryPage,
   infra: InfraCategoryPage,
   social: SocialCategoryPage,

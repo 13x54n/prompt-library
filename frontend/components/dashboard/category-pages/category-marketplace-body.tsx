@@ -12,6 +12,17 @@ import {
 } from "@/components/dashboard/dapp-marketplace-category-data";
 import { dashboardTypography } from "@/components/dashboard/dashboard-typography";
 
+/** Props from `DappMarketplaceDashboard` → per-category page → this body. */
+export type CategoryExplorePageProps = {
+  searchQuery?: string;
+};
+
+function matchesExploreQuery(query: string, ...parts: string[]): boolean {
+  const t = query.trim().toLowerCase();
+  if (!t) return true;
+  return parts.some((p) => p.toLowerCase().includes(t));
+}
+
 /** iOS App Store–style accent (readable on dark UI) */
 const STORE_BLUE = "text-[#64B5FF]";
 const STORE_BLUE_BG = "bg-[#0A84FF]/18 hover:bg-[#0A84FF]/28";
@@ -54,7 +65,7 @@ function SectionHeader({
   seeAllHref?: string;
 }) {
   return (
-    <div className="mb-3 flex items-end justify-between gap-3 px-0.5">
+    <div className="mb-2 flex items-end justify-between gap-3 px-0.5">
       <h2 id={headingId} className={dashboardTypography.sectionTitle}>
         {title}
       </h2>
@@ -187,95 +198,129 @@ function FavouriteRow({
 /**
  * Shared marketplace sections for a category — composed by per-category page components.
  */
-export function CategoryMarketplaceBody({ categoryId }: { categoryId: CategoryId }) {
+export function CategoryMarketplaceBody({
+  categoryId,
+  searchQuery = "",
+}: {
+  categoryId: CategoryId;
+  searchQuery?: string;
+}) {
   const tab = CATEGORY_TAB_CONTENT[categoryId];
+  const q = searchQuery;
+
+  const discoverTop = tab.discoverTop.filter((row) =>
+    matchesExploreQuery(q, row.name, row.tag),
+  );
+  const editorialItems = tab.editorialItems.filter((row) =>
+    matchesExploreQuery(q, row.label, row.sublabel, row.description),
+  );
+  const featuredNew = tab.featuredNew.filter((row) =>
+    matchesExploreQuery(q, row.label, row.sublabel, row.description),
+  );
+  const favorites = tab.favorites.filter((row) =>
+    matchesExploreQuery(q, row.name, row.cat),
+  );
+
+  const hasQuery = q.trim().length > 0;
 
   return (
-    <div className="flex flex-col gap-8 sm:gap-10">
+    <div className="flex flex-col gap-5 sm:gap-6">
       <section aria-labelledby="section-top-picks">
         <SectionHeader
           title="Top picks for you"
           headingId="section-top-picks"
           seeAllHref={`/dashboard/${categoryId}`}
         />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {tab.discoverTop.map((app, i) => (
-            <AppListRow
-              key={`${categoryId}-discover-${i}`}
-              categoryId={categoryId}
-              name={app.name}
-              slug={app.slug}
-              tag={app.tag}
-              logo={app.logo}
-            />
-          ))}
-        </div>
+        {discoverTop.length === 0 && hasQuery ? (
+          <p className={dashboardTypography.empty}>
+            No apps match “{q.trim()}”.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {discoverTop.map((app, i) => (
+              <AppListRow
+                key={`${categoryId}-discover-${i}`}
+                categoryId={categoryId}
+                name={app.name}
+                slug={app.slug}
+                tag={app.tag}
+                logo={app.logo}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
-      <section className="space-y-3">
-        <HoverExpand
-          items={tab.editorialItems.map((item) => ({
-            label: item.label,
-            sublabel: item.sublabel,
-            image: item.image,
-            logo: item.logo,
-            description: item.description,
-            ctaHref: dashboardAppHref(categoryId, item.slug),
-          }))}
-          className="overflow-hidden rounded-3xl ring-1 ring-white/10"
-          ctaClassName={cn(
-            "inline-flex h-8 min-w-[4.5rem] shrink-0 items-center justify-center rounded-full px-4 transition-colors",
-            dashboardTypography.cta,
-            STORE_BLUE_BG,
-            STORE_BLUE,
-          )}
-        />
-      </section>
+      {editorialItems.length > 0 ? (
+        <section className="hidden space-y-2 sm:block">
+          <HoverExpand
+            items={editorialItems.map((item) => ({
+              label: item.label,
+              sublabel: item.sublabel,
+              image: item.image,
+              logo: item.logo,
+              description: item.description,
+              ctaHref: dashboardAppHref(categoryId, item.slug),
+            }))}
+            className="overflow-hidden rounded-3xl ring-1 ring-white/10"
+            ctaClassName={cn(
+              "inline-flex h-8 min-w-[4.5rem] shrink-0 items-center justify-center rounded-full px-4 transition-colors",
+              dashboardTypography.cta,
+              STORE_BLUE_BG,
+              STORE_BLUE,
+            )}
+          />
+        </section>
+      ) : null}
 
-      <section>
-        <SectionHeader
-          title="New on Maple"
-          seeAllHref={`/dashboard/${categoryId}`}
-        />
-        {/* Mobile: horizontal story cards like App Store; md+: grid */}
-        <div
-          className={cn(
-            "scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-hidden px-4 pb-1 pt-0.5",
-            "sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 sm:snap-none lg:grid-cols-3",
-          )}
-        >
-          {tab.featuredNew.map((item) => (
-            <FeaturedStoryCard
-              key={`${categoryId}-${item.label}`}
-              href={dashboardAppHref(categoryId, item.slug)}
-              label={item.label}
-              logo={item.logo}
-              image={item.image}
-              subtitle={item.description}
-            />
-          ))}
-        </div>
-      </section>
+      {featuredNew.length > 0 ? (
+        <section>
+          <SectionHeader
+            title="New on Maple"
+            seeAllHref={`/dashboard/${categoryId}`}
+          />
+          {/* Mobile: horizontal story cards like App Store; md+: grid */}
+          <div
+            className={cn(
+              "scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto overflow-y-hidden px-4 pb-1 pt-0.5",
+              "sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 sm:snap-none lg:grid-cols-3",
+            )}
+          >
+            {featuredNew.map((item) => (
+              <FeaturedStoryCard
+                key={`${categoryId}-${item.label}`}
+                href={dashboardAppHref(categoryId, item.slug)}
+                label={item.label}
+                logo={item.logo}
+                image={item.image}
+                subtitle={item.description}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
-      <section>
-        <SectionHeader
-          title="Favourites"
-          seeAllHref={`/dashboard/${categoryId}`}
-        />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {tab.favorites.map((app) => (
-            <FavouriteRow
-              key={`${categoryId}-${app.name}`}
-              categoryId={categoryId}
-              slug={app.slug}
-              name={app.name}
-              cat={app.cat}
-            />
-          ))}
-        </div>
-      </section>
+      {favorites.length > 0 ? (
+        <section>
+          <SectionHeader
+            title="Favourites"
+            seeAllHref={`/dashboard/${categoryId}`}
+          />
+          <div className="grid grid-cols-1 gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {favorites.map((app) => (
+              <FavouriteRow
+                key={`${categoryId}-${app.name}`}
+                categoryId={categoryId}
+                slug={app.slug}
+                name={app.name}
+                cat={app.cat}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
-      <footer className="border-t border-white/10 pt-6 sm:pt-8">
+      <footer className="border-t border-white/10 pt-4 sm:pt-6">
         <p className={dashboardTypography.footnote}>
           The Maple dApp directory is curated for inspiration. Always verify
           contracts and links before signing.

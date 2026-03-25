@@ -1,5 +1,6 @@
 "use client";
 
+import { DashboardCreateHome } from "@/components/dashboard/dashboard-create-home";
 import { dashboardTypography } from "@/components/dashboard/dashboard-typography";
 import { DashboardDockNav } from "@/components/dashboard/dashboard-dock-nav";
 import { DashboardScrollRegion } from "@/components/dashboard/dashboard-scroll-region";
@@ -40,21 +41,13 @@ export function DashboardCreatePageClient() {
     <SidebarProvider>
       <SidebarInset>
         <DashboardScrollRegion>
-          <div className="mx-auto w-full max-w-3xl px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 sm:pt-6 md:max-w-5xl md:px-8">
+          <div className="mx-auto w-full max-w-3xl px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 sm:pt-6 md:max-w-5xl md:px-8 lg:max-w-6xl">
             <div className="relative min-h-full">
               <div
                 className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_100%_55%_at_50%_-10%,oklch(0.52_0.16_264/0.12),transparent_50%),linear-gradient(to_bottom,oklch(0.12_0.01_264),var(--background))]"
                 aria-hidden
               />
-              <header className="flex items-start justify-between gap-3 pb-6">
-                <div className="min-w-0 pt-0.5">
-                  <h1 className={dashboardTypography.pageTitle}>Create</h1>
-                  <p className={dashboardTypography.subtitle}>
-                    Build prompts, agents, and flows — this space is coming soon.
-                  </p>
-                </div>
-                <DashboardWalletMenu address={address} />
-              </header>
+              <DashboardCreateHome />
             </div>
           </div>
         </DashboardScrollRegion>
