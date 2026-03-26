@@ -9,7 +9,10 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import type { CreateProject } from "@/components/dashboard/create-projects-data";
 import { DashboardCreateAiChatPanel } from "@/components/dashboard/dashboard-create-ai-chat-panel";
 import { DashboardCreateAndroidMockup } from "@/components/dashboard/dashboard-create-android-mockup";
-import { DASHBOARD_CREATE_HREF } from "@/components/dashboard/dashboard-constants";
+import {
+  DASHBOARD_CREATE_HREF,
+  DASHBOARD_EXPLORE_HREF,
+} from "@/components/dashboard/dashboard-constants";
 import { dashboardTypography } from "@/components/dashboard/dashboard-typography";
 import { DashboardDockNav } from "@/components/dashboard/dashboard-dock-nav";
 import { DashboardScrollRegion } from "@/components/dashboard/dashboard-scroll-region";
@@ -27,8 +30,12 @@ export function DashboardCreateProjectDetailClient({
 
   useEffect(() => {
     if (connecting) return;
-    if (!connected) router.replace("/");
+    if (!connected) router.replace(DASHBOARD_EXPLORE_HREF);
   }, [connected, connecting, router]);
+
+  const [chatMode, setChatMode] = useState<"open" | "minimized" | "closed">(
+    "open",
+  );
 
   if (connecting) {
     return (
@@ -47,10 +54,6 @@ export function DashboardCreateProjectDetailClient({
   }
 
   const address = publicKey.toBase58();
-
-  const [chatMode, setChatMode] = useState<"open" | "minimized" | "closed">(
-    "open",
-  );
 
   return (
     <SidebarProvider>

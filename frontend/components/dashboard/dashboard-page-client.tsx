@@ -1,19 +1,8 @@
 "use client";
 
-import { AppSidebar } from "@/components/app-sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { dashboardTypography } from "@/components/dashboard/dashboard-typography";
 import { DashboardDockNav } from "@/components/dashboard/dashboard-dock-nav";
@@ -21,18 +10,9 @@ import { DashboardScrollRegion } from "@/components/dashboard/dashboard-scroll-r
 import { DappMarketplaceDashboard } from "@/components/dashboard/dapp-marketplace-dashboard";
 import type { CategoryId } from "@/components/dashboard/dapp-marketplace-category-data";
 import { useWallet } from "@solana/wallet-adapter-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 
 export function DashboardPageClient({ category }: { category: CategoryId }) {
-  const { connected, connecting, publicKey } = useWallet();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (connecting) return;
-    if (!connected) router.replace("/");
-  }, [connected, connecting, router]);
+  const { connecting, publicKey } = useWallet();
 
   if (connecting) {
     return (
@@ -42,15 +22,7 @@ export function DashboardPageClient({ category }: { category: CategoryId }) {
     );
   }
 
-  if (!connected || !publicKey) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center bg-background px-6">
-        <p className={dashboardTypography.status}>Redirecting…</p>
-      </div>
-    );
-  }
-
-  const address = publicKey.toBase58();
+  const address = publicKey?.toBase58() ?? "";
 
   return (
     <SidebarProvider>

@@ -1,11 +1,11 @@
 "use client";
 
-import { WalletIcon } from "lucide-react";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
 import { HoverExpand } from "@/components/unlumen-ui/hover-expand";
+import { getAppDetail } from "@/components/dashboard/dapp-app-registry";
 import {
   CATEGORY_TAB_CONTENT,
   type CategoryId,
@@ -58,28 +58,15 @@ function GetLink({
 function SectionHeader({
   title,
   headingId,
-  seeAllHref,
 }: {
   title: string;
   headingId?: string;
-  seeAllHref?: string;
 }) {
   return (
-    <div className="mb-2 flex items-end justify-between gap-3 px-0.5">
+    <div className="mb-2 px-0.5">
       <h2 id={headingId} className={dashboardTypography.sectionTitle}>
         {title}
       </h2>
-      <Link
-        href={seeAllHref ?? "#"}
-        scroll={seeAllHref ? false : undefined}
-        className={cn(
-          "min-h-[44px] shrink-0 px-1 py-2 sm:min-h-0 sm:p-0",
-          dashboardTypography.link,
-          STORE_BLUE,
-        )}
-      >
-        See All
-      </Link>
     </div>
   );
 }
@@ -168,11 +155,13 @@ function FavouriteRow({
   cat,
   categoryId,
   slug,
+  logo,
 }: {
   name: string;
   cat: string;
   categoryId: CategoryId;
   slug: string;
+  logo: string;
 }) {
   return (
     <div className="flex min-h-[4.75rem] items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 pr-3 backdrop-blur-sm active:bg-white/[0.06] sm:min-h-[4.5rem] sm:gap-3 sm:pr-3.5">
@@ -181,10 +170,7 @@ function FavouriteRow({
         scroll={false}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-xl outline-none ring-offset-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-[#64B5FF]/50"
       >
-        <div className="relative shrink-0">
-          <div className="size-[56px] rounded-[1.05rem] bg-gradient-to-br from-white/18 to-white/6 ring-1 ring-white/12" />
-          <WalletIcon className="text-muted-foreground absolute left-1/2 top-1/2 size-[22px] -translate-x-1/2 -translate-y-1/2" />
-        </div>
+        <img src={logo} alt="" className="size-[56px] shrink-0 rounded-[1.05rem] shadow-md ring-1 ring-white/10 sm:size-[60px] sm:rounded-[1.15rem]" />
         <div className="min-w-0 flex-1 text-left">
           <p className={dashboardTypography.listPrimary}>{name}</p>
           <p className={dashboardTypography.listMeta}>{cat}</p>
@@ -226,11 +212,7 @@ export function CategoryMarketplaceBody({
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
       <section aria-labelledby="section-top-picks">
-        <SectionHeader
-          title="Top picks for you"
-          headingId="section-top-picks"
-          seeAllHref={`/dashboard/${categoryId}`}
-        />
+        <SectionHeader title="Top picks for you" headingId="section-top-picks" />
         {discoverTop.length === 0 && hasQuery ? (
           <p className={dashboardTypography.empty}>
             No apps match “{q.trim()}”.
@@ -275,10 +257,7 @@ export function CategoryMarketplaceBody({
 
       {featuredNew.length > 0 ? (
         <section>
-          <SectionHeader
-            title="New on Maple"
-            seeAllHref={`/dashboard/${categoryId}`}
-          />
+          <SectionHeader title="New on Maple" />
           {/* Mobile: horizontal story cards like App Store; md+: grid */}
           <div
             className={cn(
@@ -302,20 +281,21 @@ export function CategoryMarketplaceBody({
 
       {favorites.length > 0 ? (
         <section>
-          <SectionHeader
-            title="Favourites"
-            seeAllHref={`/dashboard/${categoryId}`}
-          />
+          <SectionHeader title="Favourites" />
           <div className="grid grid-cols-1 gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {favorites.map((app) => (
-              <FavouriteRow
-                key={`${categoryId}-${app.name}`}
-                categoryId={categoryId}
-                slug={app.slug}
-                name={app.name}
-                cat={app.cat}
-              />
-            ))}
+            {favorites.map((app) => {
+              const logo = getAppDetail(app.slug)?.logo ?? "";
+              return (
+                <FavouriteRow
+                  key={`${categoryId}-${app.name}`}
+                  categoryId={categoryId}
+                  slug={app.slug}
+                  name={app.name}
+                  cat={app.cat}
+                  logo={logo}
+                />
+              );
+            })}
           </div>
         </section>
       ) : null}

@@ -2,13 +2,18 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Search, X } from "lucide-react";
+import Link from "next/link";
+import { Compass, Pickaxe, Search, X } from "lucide-react";
 
 import { useDashboardAppWindows } from "@/components/dashboard/dashboard-app-windows-context";
 import {
   getPurchasedAppDetails,
   type AppDetail,
 } from "@/components/dashboard/dapp-app-registry";
+import {
+  DASHBOARD_CREATE_HREF,
+  DASHBOARD_EXPLORE_HREF,
+} from "@/components/dashboard/dashboard-constants";
 import { dashboardTypography } from "@/components/dashboard/dashboard-typography";
 import { cn } from "@/lib/utils";
 import {
@@ -285,7 +290,43 @@ export function DashboardHome() {
             Your apps
           </h2>
           {sorted.length === 0 ? (
-            <p className={dashboardTypography.empty}>No apps in your library.</p>
+            <div
+              className={cn(
+                "mx-auto max-w-md rounded-xl border border-white/[0.1] bg-[#1c1c1e] p-6 shadow-sm ring-1 ring-white/[0.04] sm:p-8",
+              )}
+            >
+              <p className="text-center text-base font-semibold text-white">
+                No apps yet
+              </p>
+              <p className="text-muted-foreground mt-2 text-center text-sm leading-relaxed">
+                Create your first project or add apps from the marketplace to
+                see them here.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                <Link
+                  href={DASHBOARD_CREATE_HREF}
+                  className={cn(
+                    "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0A84FF] px-4 text-sm font-medium text-white outline-none",
+                    "transition-[filter,transform] hover:brightness-110 active:scale-[0.98]",
+                    "focus-visible:ring-2 focus-visible:ring-[#64B5FF]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1c1c1e]",
+                  )}
+                >
+                  <Pickaxe className="size-4 shrink-0 opacity-95" aria-hidden />
+                  Create one
+                </Link>
+                <Link
+                  href={DASHBOARD_EXPLORE_HREF}
+                  className={cn(
+                    "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-4 text-sm font-medium text-foreground outline-none",
+                    "transition-[background-color,transform] hover:bg-white/10 active:scale-[0.98]",
+                    "focus-visible:ring-2 focus-visible:ring-[#64B5FF]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1c1c1e]",
+                  )}
+                >
+                  <Compass className="size-4 shrink-0 opacity-90" aria-hidden />
+                  Get from marketplace
+                </Link>
+              </div>
+            </div>
           ) : (
             <ul
               className={cn(

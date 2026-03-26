@@ -1,11 +1,10 @@
 "use client";
 
-import { DashboardAppDrawerStack } from "@/components/dashboard/dashboard-app-drawer-stack";
-import { DashboardAppWindowsProvider } from "@/components/dashboard/dashboard-app-windows-context";
 import { dashboardTypography } from "@/components/dashboard/dashboard-typography";
 import { DashboardDockNav } from "@/components/dashboard/dashboard-dock-nav";
 import { DashboardHome } from "@/components/dashboard/dashboard-home";
 import { DashboardScrollRegion } from "@/components/dashboard/dashboard-scroll-region";
+import { DASHBOARD_EXPLORE_HREF } from "@/components/dashboard/dashboard-constants";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -17,7 +16,7 @@ export function DashboardHomePageClient() {
 
   useEffect(() => {
     if (connecting) return;
-    if (!connected) router.replace("/");
+    if (!connected) router.replace(DASHBOARD_EXPLORE_HREF);
   }, [connected, connecting, router]);
 
   if (connecting) {
@@ -38,17 +37,14 @@ export function DashboardHomePageClient() {
 
   return (
     <SidebarProvider>
-      <DashboardAppWindowsProvider>
-        <SidebarInset>
-          <DashboardScrollRegion>
-            <div className="mx-auto w-full max-w-3xl px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 sm:pt-6 md:max-w-5xl md:px-8">
-              <DashboardHome />
-            </div>
-          </DashboardScrollRegion>
-          <DashboardAppDrawerStack />
-          <DashboardDockNav />
-        </SidebarInset>
-      </DashboardAppWindowsProvider>
+      <SidebarInset>
+        <DashboardScrollRegion>
+          <div className="mx-auto w-full max-w-3xl px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 sm:pt-6 md:max-w-5xl md:px-8">
+            <DashboardHome />
+          </div>
+        </DashboardScrollRegion>
+        <DashboardDockNav />
+      </SidebarInset>
     </SidebarProvider>
   );
 }

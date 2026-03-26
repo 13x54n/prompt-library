@@ -4,7 +4,7 @@ import { DashboardCreateHome } from "@/components/dashboard/dashboard-create-hom
 import { dashboardTypography } from "@/components/dashboard/dashboard-typography";
 import { DashboardDockNav } from "@/components/dashboard/dashboard-dock-nav";
 import { DashboardScrollRegion } from "@/components/dashboard/dashboard-scroll-region";
-import { DashboardWalletMenu } from "@/components/dashboard/dapp-marketplace-dashboard";
+import { DASHBOARD_EXPLORE_HREF } from "@/components/dashboard/dashboard-constants";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -16,7 +16,7 @@ export function DashboardCreatePageClient() {
 
   useEffect(() => {
     if (connecting) return;
-    if (!connected) router.replace("/");
+    if (!connected) router.replace(DASHBOARD_EXPLORE_HREF);
   }, [connected, connecting, router]);
 
   if (connecting) {
@@ -34,8 +34,6 @@ export function DashboardCreatePageClient() {
       </div>
     );
   }
-
-  const address = publicKey.toBase58();
 
   return (
     <SidebarProvider>

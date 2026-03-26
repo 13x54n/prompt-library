@@ -3,13 +3,21 @@
 import type { ComponentType, HTMLAttributes } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 import {
   DASHBOARD_CREATE_HREF,
+  DASHBOARD_EXPLORE_HREF,
   DASHBOARD_HOME_HREF,
 } from "@/components/dashboard/dashboard-constants";
-import { DEFAULT_CATEGORY_ID } from "@/components/dashboard/dapp-marketplace-category-data";
+import { DashboardWalletMenu } from "@/components/dashboard/dapp-marketplace-dashboard";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MapleWalletMultiButton } from "@/components/wallet/maple-wallet-multi-button";
 import { CompassIcon } from "../ui/compass";
 import { HomeIcon } from "../ui/home";
 import { PickaxeIcon } from "../ui/pickaxe";
@@ -17,8 +25,6 @@ import { PickaxeIcon } from "../ui/pickaxe";
 type DockIcon = ComponentType<
   HTMLAttributes<HTMLDivElement> & { size?: number }
 >;
-
-const EXPLORE_HREF = `/dashboard/${DEFAULT_CATEGORY_ID}`;
 
 function DockItem({
   href,
@@ -50,12 +56,58 @@ function DockItem({
   );
 }
 
+const dockLogoTriggerClass = cn(
+  "mr-1 flex shrink-0 rounded-xl p-0.5 outline-none transition-opacity",
+  "hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[#64B5FF]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+);
+
+function DockLogoMenu() {
+  const { connected, publicKey } = useWallet();
+  const address = publicKey?.toBase58() ?? "";
+
+  const logoTrigger = (
+    <button
+      type="button"
+      className={dockLogoTriggerClass}
+      aria-label="Maple menu"
+    >
+      <img src="/logo.png" alt="" width={30} height={30} className="h-8 w-8" />
+    </button>
+  );
+
+  if (connected && publicKey) {
+    return (
+      <DashboardWalletMenu
+        address={address}
+        contentAlign="start"
+        contentSide="top"
+        trigger={logoTrigger}
+      />
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>{logoTrigger}</DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        side="top"
+        sideOffset={10}
+        className="w-[min(calc(100vw-2rem),20rem)] rounded-2xl border border-white/10 bg-background p-2 shadow-lg ring-1 ring-white/10"
+      >
+        <MapleWalletMultiButton className="h-[44px] w-full rounded-lg border border-neutral-800 bg-black px-4 text-sm font-medium text-white transition-transform hover:scale-[1.02] active:scale-[0.98]" />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /**
  * Floating bottom tab bar (macOS dock–style) with glass blur.
  * Home = app directory; Explore = category marketplace; Create = builder entry.
  */
 export function DashboardDockNav() {
   const pathname = usePathname();
+  const { connected } = useWallet();
   const homeActive =
     pathname === DASHBOARD_HOME_HREF || pathname === "/dashboard";
   const createActive =
@@ -78,22 +130,26 @@ export function DashboardDockNav() {
           "dark:border-white/12 dark:bg-[rgba(28,28,30,0.55)]",
         )}
       >
-        <img src="/logo.png" alt="Logo" width={30} height={30} className="w-8 h-8 mr-1" />
+        <DockLogoMenu />
+        {connected ? (
+          <DockItem
+            href={DASHBOARD_HOME_HREF}
+            icon={HomeIcon}
+            active={homeActive}
+          />
+        ) : null}
         <DockItem
-          href={DASHBOARD_HOME_HREF}
-          icon={HomeIcon}
-          active={homeActive}
-        />
-        <DockItem
-          href={EXPLORE_HREF}
+          href={DASHBOARD_EXPLORE_HREF}
           icon={CompassIcon}
           active={exploreActive}
         />
-        <DockItem
-          href={DASHBOARD_CREATE_HREF}
-          icon={PickaxeIcon}
-          active={createActive}
-        />
+        {connected ? (
+          <DockItem
+            href={DASHBOARD_CREATE_HREF}
+            icon={PickaxeIcon}
+            active={createActive}
+          />
+        ) : null}
       </div>
     </nav>
   );

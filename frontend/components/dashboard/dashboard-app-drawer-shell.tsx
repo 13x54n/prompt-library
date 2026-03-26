@@ -4,10 +4,7 @@ import type { ReactNode } from "react";
 import { Minus, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import {
-  DrawerContent,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+import { DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 
 /** Shared with Home (iframe) and Marketplace (app detail scroll). */
 export const DASHBOARD_APP_DRAWER_OVERLAY_CLASS =
@@ -22,13 +19,101 @@ export const dashboardAppDrawerContentClassName = cn(
   "data-[vaul-drawer-direction=bottom]:!mt-0",
 );
 
-type DashboardAppDrawerShellProps = {
+export type DashboardHomeAppChrome = {
+  title: string;
+  onClose: () => void;
+  /** Home only — omit so the leading control is a spacer (e.g. Marketplace). */
+  onMinimize?: () => void;
+  /** When true, title uses Radix `DrawerTitle` (required inside `DrawerContent`). */
+  useDrawerTitle?: boolean;
+};
+
+const chromeTitleClass =
+  "min-w-0 flex-1 truncate px-1 text-center text-[13px] font-medium tracking-tight text-foreground/95";
+
+type DashboardHomeAppSurfaceProps = {
+  /** When omitted (all apps minimized), only the body renders so iframe children never remount. */
+  chrome?: DashboardHomeAppChrome;
+  children: ReactNode;
+};
+
+/**
+ * Shared launcher surface: optional title bar + one stable body slot for iframes.
+ * Home multitasking must keep `children` mounted when chrome toggles.
+ */
+export function DashboardHomeAppSurface({
+  chrome,
+  children,
+}: DashboardHomeAppSurfaceProps) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-black/20">
+      {chrome ? (
+        <div className="flex h-11 shrink-0 items-center gap-1 rounded-t-xl border-b border-white/10 bg-[#2c2c2e] px-1.5 dark:bg-[#1e1e1e]">
+          {chrome.onMinimize ? (
+            <button
+              type="button"
+              onClick={chrome.onMinimize}
+              className="flex size-10 shrink-0 items-center justify-center rounded-lg text-foreground/85 transition-colors hover:bg-white/10"
+              aria-label="Minimize"
+            >
+              <Minus className="size-5" strokeWidth={2.25} />
+            </button>
+          ) : (
+            <div className="size-10 shrink-0" aria-hidden />
+          )}
+          {chrome.useDrawerTitle ? (
+            <DrawerTitle className={chromeTitleClass}>{chrome.title}</DrawerTitle>
+          ) : (
+            <h2 className={chromeTitleClass}>{chrome.title}</h2>
+          )}
+          <button
+            type="button"
+            onClick={chrome.onClose}
+            className="flex size-10 shrink-0 items-center justify-center rounded-lg text-foreground/85 transition-colors hover:bg-white/10"
+            aria-label="Close"
+          >
+            <X className="size-5" strokeWidth={2.25} />
+          </button>
+        </div>
+      ) : null}
+
+      <div
+        className={cn(
+          "relative min-h-0 flex-1 overflow-hidden bg-black/25",
+          chrome ? "rounded-b-xl" : "rounded-xl",
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+type DashboardAppDrawerPanelProps = {
   title: string;
   onClose: () => void;
   /** Home only — omit on Marketplace so the leading control is a spacer. */
   onMinimize?: () => void;
   children: ReactNode;
 };
+
+/** Title bar + body surface (no vaul wrapper). Used by Home persistent launcher. */
+export function DashboardAppDrawerPanel({
+  title,
+  onClose,
+  onMinimize,
+  children,
+}: DashboardAppDrawerPanelProps) {
+  return (
+    <DashboardHomeAppSurface
+      chrome={{ title, onClose, onMinimize, useDrawerTitle: true }}
+    >
+      {children}
+    </DashboardHomeAppSurface>
+  );
+}
+
+type DashboardAppDrawerShellProps = DashboardAppDrawerPanelProps;
 
 /**
  * Same outer drawer + title bar chrome as Home app launcher; `children` is the
@@ -46,37 +131,13 @@ export function DashboardAppDrawerShell({
       overlayClassName={DASHBOARD_APP_DRAWER_OVERLAY_CLASS}
       className={dashboardAppDrawerContentClassName}
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-black/20">
-        <div className="flex h-11 shrink-0 items-center gap-1 rounded-t-xl border-b border-white/10 bg-[#2c2c2e] px-1.5 dark:bg-[#1e1e1e]">
-          {onMinimize ? (
-            <button
-              type="button"
-              onClick={onMinimize}
-              className="flex size-10 shrink-0 items-center justify-center rounded-lg text-foreground/85 transition-colors hover:bg-white/10"
-              aria-label="Minimize"
-            >
-              <Minus className="size-5" strokeWidth={2.25} />
-            </button>
-          ) : (
-            <div className="size-10 shrink-0" aria-hidden />
-          )}
-          <DrawerTitle className="min-w-0 flex-1 truncate px-1 text-center text-[13px] font-medium tracking-tight text-foreground/95">
-            {title}
-          </DrawerTitle>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex size-10 shrink-0 items-center justify-center rounded-lg text-foreground/85 transition-colors hover:bg-white/10"
-            aria-label="Close"
-          >
-            <X className="size-5" strokeWidth={2.25} />
-          </button>
-        </div>
-
-        <div className="relative min-h-0 flex-1 overflow-hidden rounded-b-xl bg-black/25">
-          {children}
-        </div>
-      </div>
+      <DashboardAppDrawerPanel
+        title={title}
+        onClose={onClose}
+        onMinimize={onMinimize}
+      >
+        {children}
+      </DashboardAppDrawerPanel>
     </DrawerContent>
   );
 }

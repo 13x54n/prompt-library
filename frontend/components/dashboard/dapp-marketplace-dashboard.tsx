@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Suspense, useState } from "react";
 
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -58,36 +59,51 @@ function walletAvatarUrl(seed: string) {
   return `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(seed)}`;
 }
 
-export function DashboardWalletMenu({ address }: { address: string }) {
+export function DashboardWalletMenu({
+  address,
+  trigger,
+  contentSide = "bottom",
+  contentAlign = "end",
+}: {
+  address: string;
+  /** Custom trigger (e.g. dock logo). Default: avatar button. */
+  trigger?: ReactNode;
+  contentSide?: "top" | "bottom" | "left" | "right";
+  contentAlign?: "start" | "center" | "end";
+}) {
   const { disconnect, publicKey } = useWallet();
   const full = publicKey?.toBase58() ?? address;
+
+  const defaultTrigger = (
+    <button
+      type="button"
+      className={cn(
+        "relative flex size-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 ring-1 ring-white/15",
+        "cursor-pointer outline-none transition-[transform,box-shadow] active:scale-[0.98]",
+        "focus-visible:ring-2 focus-visible:ring-[#64B5FF]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+      )}
+      aria-label="Account menu"
+    >
+      <img
+        src={walletAvatarUrl(full)}
+        alt=""
+        className="size-full object-cover"
+        width={44}
+        height={44}
+        loading="eager"
+        decoding="async"
+      />
+    </button>
+  );
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "relative flex size-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 ring-1 ring-white/15",
-            "cursor-pointer outline-none transition-[transform,box-shadow] active:scale-[0.98]",
-            "focus-visible:ring-2 focus-visible:ring-[#64B5FF]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-          )}
-          aria-label="Account menu"
-        >
-          <img
-            src={walletAvatarUrl(full)}
-            alt=""
-            className="size-full object-cover"
-            width={44}
-            height={44}
-            loading="eager"
-            decoding="async"
-          />
-        </button>
+        {trigger ?? defaultTrigger}
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        align="end"
-        side="bottom"
+        align={contentAlign}
+        side={contentSide}
         sideOffset={8}
         className="w-[min(calc(100vw-2rem),20rem)] rounded-2xl p-1.5 shadow-lg ring-1 ring-white/10"
       >
@@ -126,10 +142,10 @@ export function DashboardWalletMenu({ address }: { address: string }) {
 }
 
 export function DappMarketplaceDashboard({
-  address,
   category,
 }: {
-  address: string;
+  /** Reserved for profile / wallet UI when enabled; marketplace works without a wallet. */
+  address?: string;
   category: CategoryId;
 }) {
   const CategoryPage = CATEGORY_PAGE_COMPONENT[category];
@@ -144,16 +160,6 @@ export function DappMarketplaceDashboard({
       />
 
       <div className="flex flex-col gap-4 sm:gap-5 md:gap-6 md:pb-1">
-        {/* App Store–style masthead: sticky frosted bar on mobile */}
-        {/* <header className="sticky top-0 z-30 -mx-4 border-b border-white/[0.07] bg-background/75 px-4 pb-2 pt-1 backdrop-blur-xl supports-[backdrop-filter]:bg-background/55 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 pt-0.5">
-              <h1 className={dashboardTypography.pageTitle}>Today</h1>
-            </div>
-            <DashboardWalletMenu address={address} />
-          </div>
-        </header> */}
-
         {/* Categories: horizontal strip on sm+ */}
         <nav
           className="-mx-4 hidden sm:mx-0 sm:block"
