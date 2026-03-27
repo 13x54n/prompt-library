@@ -4,6 +4,7 @@ import type { ComponentType, HTMLAttributes } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 
 import {
   DASHBOARD_CREATE_HREF,
@@ -12,12 +13,6 @@ import {
 } from "@/components/dashboard/dashboard-constants";
 import { DashboardWalletMenu } from "@/components/dashboard/dapp-marketplace-dashboard";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MapleWalletMultiButton } from "@/components/wallet/maple-wallet-multi-button";
 import { CompassIcon } from "../ui/compass";
 import { HomeIcon } from "../ui/home";
 import { PickaxeIcon } from "../ui/pickaxe";
@@ -63,6 +58,7 @@ const dockLogoTriggerClass = cn(
 
 function DockLogoMenu() {
   const { connected, publicKey } = useWallet();
+  const { setVisible: setWalletModalVisible } = useWalletModal();
   const address = publicKey?.toBase58() ?? "";
 
   const logoTrigger = (
@@ -87,17 +83,14 @@ function DockLogoMenu() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>{logoTrigger}</DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        side="top"
-        sideOffset={10}
-        className="w-[min(calc(100vw-2rem),20rem)] rounded-2xl border border-white/10 bg-background p-2 shadow-lg ring-1 ring-white/10"
-      >
-        <MapleWalletMultiButton className="h-[44px] w-full rounded-lg border border-neutral-800 bg-black px-4 text-sm font-medium text-white transition-transform hover:scale-[1.02] active:scale-[0.98]" />
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <button
+      type="button"
+      className={dockLogoTriggerClass}
+      aria-label="Connect wallet"
+      onClick={() => setWalletModalVisible(true)}
+    >
+      <img src="/logo.png" alt="" width={30} height={30} className="h-8 w-8" />
+    </button>
   );
 }
 

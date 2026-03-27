@@ -24,6 +24,8 @@ export type DashboardHomeAppChrome = {
   onClose: () => void;
   /** Home only — omit so the leading control is a spacer (e.g. Marketplace). */
   onMinimize?: () => void;
+  /** Extra controls before the close button (e.g. Install on app detail). */
+  trailingActions?: ReactNode;
   /** When true, title uses Radix `DrawerTitle` (required inside `DrawerContent`). */
   useDrawerTitle?: boolean;
 };
@@ -66,14 +68,17 @@ export function DashboardHomeAppSurface({
           ) : (
             <h2 className={chromeTitleClass}>{chrome.title}</h2>
           )}
-          <button
-            type="button"
-            onClick={chrome.onClose}
-            className="flex size-10 shrink-0 items-center justify-center rounded-lg text-foreground/85 transition-colors hover:bg-white/10"
-            aria-label="Close"
-          >
-            <X className="size-5" strokeWidth={2.25} />
-          </button>
+          <div className="flex shrink-0 items-center gap-0.5 pr-0.5">
+            {chrome.trailingActions}
+            <button
+              type="button"
+              onClick={chrome.onClose}
+              className="flex size-10 shrink-0 items-center justify-center rounded-lg text-foreground/85 transition-colors hover:bg-white/10"
+              aria-label="Close"
+            >
+              <X className="size-5" strokeWidth={2.25} />
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -94,6 +99,7 @@ type DashboardAppDrawerPanelProps = {
   onClose: () => void;
   /** Home only — omit on Marketplace so the leading control is a spacer. */
   onMinimize?: () => void;
+  trailingActions?: ReactNode;
   children: ReactNode;
 };
 
@@ -102,11 +108,18 @@ export function DashboardAppDrawerPanel({
   title,
   onClose,
   onMinimize,
+  trailingActions,
   children,
 }: DashboardAppDrawerPanelProps) {
   return (
     <DashboardHomeAppSurface
-      chrome={{ title, onClose, onMinimize, useDrawerTitle: true }}
+      chrome={{
+        title,
+        onClose,
+        onMinimize,
+        trailingActions,
+        useDrawerTitle: true,
+      }}
     >
       {children}
     </DashboardHomeAppSurface>
@@ -123,6 +136,7 @@ export function DashboardAppDrawerShell({
   title,
   onClose,
   onMinimize,
+  trailingActions,
   children,
 }: DashboardAppDrawerShellProps) {
   return (
@@ -135,6 +149,7 @@ export function DashboardAppDrawerShell({
         title={title}
         onClose={onClose}
         onMinimize={onMinimize}
+        trailingActions={trailingActions}
       >
         {children}
       </DashboardAppDrawerPanel>

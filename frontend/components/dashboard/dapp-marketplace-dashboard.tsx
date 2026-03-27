@@ -105,15 +105,12 @@ export function DashboardWalletMenu({
         align={contentAlign}
         side={contentSide}
         sideOffset={8}
-        className="w-[min(calc(100vw-2rem),20rem)] rounded-2xl p-1.5 shadow-lg ring-1 ring-white/10"
+        className="w-fit max-w-[min(calc(100vw-2rem),20rem)] rounded-2xl p-1.5 shadow-lg ring-1 ring-white/10"
       >
         <DropdownMenuLabel className="p-0 font-normal">
-          <div className="flex flex-col gap-1.5 px-2 py-2 text-left">
+          <div className="px-2 py-2 text-left">
             <span className={dashboardTypography.menuLabel}>
               Connected wallet
-            </span>
-            <span className={dashboardTypography.menuMono}>
-              {full}
             </span>
           </div>
         </DropdownMenuLabel>
@@ -202,7 +199,7 @@ export function DappMarketplaceDashboard({
               spellCheck={false}
               className={cn(
                 "w-full rounded-full border border-white/[0.08] bg-white/[0.07] py-2 pl-9 pr-3 text-foreground shadow-inner outline-none",
-                dashboardTypography.input,
+                "text-base sm:text-sm",
                 "placeholder:text-muted-foreground/80",
                 "transition-[box-shadow,background-color] focus:border-[#64B5FF]/35 focus:bg-white/[0.1] focus:ring-2 focus:ring-[#64B5FF]/25",
                 "sm:py-2.5 sm:pl-10 sm:pr-4",

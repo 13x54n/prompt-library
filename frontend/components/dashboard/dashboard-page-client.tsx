@@ -9,12 +9,23 @@ import { DashboardDockNav } from "@/components/dashboard/dashboard-dock-nav";
 import { DashboardScrollRegion } from "@/components/dashboard/dashboard-scroll-region";
 import { DappMarketplaceDashboard } from "@/components/dashboard/dapp-marketplace-dashboard";
 import type { CategoryId } from "@/components/dashboard/dapp-marketplace-category-data";
+import { useSyncExternalStore } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
+
+function useMounted() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
 
 export function DashboardPageClient({ category }: { category: CategoryId }) {
   const { connecting, publicKey } = useWallet();
+  /** Wallet `connecting` can differ after hydration (autoConnect); only show full-page wait once mounted. */
+  const mounted = useMounted();
 
-  if (connecting) {
+  if (mounted && connecting) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-2 bg-background px-6">
         <p className={dashboardTypography.status}>Connecting wallet…</p>

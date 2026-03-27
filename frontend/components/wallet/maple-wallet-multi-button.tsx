@@ -36,6 +36,7 @@ function MapleWalletConnectionButton({
   disabled,
   tabIndex,
   "aria-expanded": ariaExpanded,
+  "aria-label": ariaLabel,
   onClick,
 }: {
   walletIcon?: string;
@@ -46,11 +47,13 @@ function MapleWalletConnectionButton({
   disabled?: boolean;
   tabIndex?: number;
   "aria-expanded"?: boolean;
+  "aria-label"?: string;
   onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
 }) {
   return (
     <button
       aria-expanded={ariaExpanded}
+      aria-label={ariaLabel}
       className={cn(
         "wallet-adapter-button wallet-adapter-button-trigger",
         className,
@@ -139,8 +142,7 @@ export function MapleWalletMultiButton({
   const content = useMemo(() => {
     if (children) return children;
     if (publicKey) {
-      const base58 = publicKey.toBase58();
-      return `${base58.slice(0, 4)}..${base58.slice(-4)}`;
+      return null;
     }
     if (buttonState === "connecting" || buttonState === "has-wallet") {
       return LABELS[buttonState];
@@ -205,6 +207,7 @@ export function MapleWalletMultiButton({
     <div className="wallet-adapter-dropdown" ref={ref}>
       <MapleWalletConnectionButton
         aria-expanded={menuOpen}
+        aria-label={publicKey && !children ? "Wallet menu" : undefined}
         className={className}
         disabled={disabled ?? connecting}
         onClick={() => void handlePrimaryClick()}

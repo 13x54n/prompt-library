@@ -5,7 +5,6 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 import { HoverExpand } from "@/components/unlumen-ui/hover-expand";
-import { getAppDetail } from "@/components/dashboard/dapp-app-registry";
 import {
   CATEGORY_TAB_CONTENT,
   type CategoryId,
@@ -283,19 +282,16 @@ export function CategoryMarketplaceBody({
         <section>
           <SectionHeader title="Favourites" />
           <div className="grid grid-cols-1 gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {favorites.map((app) => {
-              const logo = getAppDetail(app.slug)?.logo ?? "";
-              return (
-                <FavouriteRow
-                  key={`${categoryId}-${app.name}`}
-                  categoryId={categoryId}
-                  slug={app.slug}
-                  name={app.name}
-                  cat={app.cat}
-                  logo={logo}
-                />
-              );
-            })}
+            {favorites.map((app) => (
+              <FavouriteRow
+                key={`${categoryId}-${app.name}`}
+                categoryId={categoryId}
+                slug={app.slug}
+                name={app.name}
+                cat={app.cat}
+                logo={app.logo}
+              />
+            ))}
           </div>
         </section>
       ) : null}

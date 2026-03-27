@@ -18,7 +18,9 @@ import {
   type MouseEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 import { walletAdapterDisplayName } from "@/lib/solana/mwa-display";
+import { cn } from "@/lib/utils";
 
 function Collapse({
   id,
@@ -113,21 +115,32 @@ function MapleWalletListItem({
   wallet: Wallet;
 }) {
   const label = walletAdapterDisplayName(wallet.adapter.name);
+  const detected = wallet.readyState === WalletReadyState.Installed;
   return (
     <li>
       <button
-        className="wallet-adapter-button"
+        className={cn(
+          "maple-wallet-connect__option flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-muted px-4 py-3 text-left text-[0.9375rem] font-medium text-foreground",
+          "transition-[background-color,border-color,transform] hover:bg-muted/80 active:scale-[0.99]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#64B5FF]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        )}
         onClick={handleClick}
         tabIndex={tabIndex ?? 0}
         type="button"
       >
-        <i className="wallet-adapter-button-start-icon">
-          <WalletIcon wallet={wallet} />
-        </i>
-        {label}
-        {wallet.readyState === WalletReadyState.Installed && (
-          <span>Detected</span>
-        )}
+        <span className="flex min-w-0 flex-1 items-center gap-3">
+          <span className="maple-wallet-connect__icon flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background ring-1 ring-border">
+            <span className="flex size-7 items-center justify-center [&_img]:size-7 [&_img]:rounded-md">
+              <WalletIcon wallet={wallet} />
+            </span>
+          </span>
+          <span className="truncate">{label}</span>
+        </span>
+        {detected ? (
+          <span className="text-muted-foreground shrink-0 text-[0.8125rem]">
+            Detected
+          </span>
+        ) : null}
       </button>
     </li>
   );
@@ -253,27 +266,48 @@ export function MapleWalletModal({
     <div
       aria-labelledby="wallet-adapter-modal-title"
       aria-modal="true"
-      className={`wallet-adapter-modal ${fadeIn ? "wallet-adapter-modal-fade-in" : ""} ${className}`}
+      className={cn(
+        "maple-wallet-connect-root wallet-adapter-modal font-sans",
+        fadeIn && "maple-wallet-connect--open",
+        className,
+      )}
       ref={ref}
       role="dialog"
     >
-      <div className="wallet-adapter-modal-container">
-        <div className="wallet-adapter-modal-wrapper">
-          <button
-            className="wallet-adapter-modal-button-close"
+      <div
+        className="maple-wallet-connect__backdrop wallet-adapter-modal-overlay"
+        onMouseDown={handleClose}
+        role="presentation"
+      />
+      <div className="wallet-adapter-modal-container maple-wallet-connect__container">
+        <div
+          className={cn(
+            "wallet-adapter-modal-wrapper maple-wallet-connect__panel",
+            "flex w-[min(100%,22rem)] min-w-[min(100%,17.5rem)] max-w-md flex-col",
+            "rounded-2xl",
+          )}
+        >
+          {/* <button
+            className={cn(
+              "wallet-adapter-modal-button-close maple-wallet-connect__close",
+              "flex size-10 items-center justify-center rounded-full p-0 shadow-sm",
+              "text-muted-foreground transition-colors hover:text-foreground",
+            )}
+            aria-label="Close"
             onClick={handleClose}
             type="button"
           >
-            <svg width="14" height="14">
-              <path d="M14 12.461 8.3 6.772l5.234-5.233L12.006 0 6.772 5.234 1.54 0 0 1.539l5.234 5.233L0 12.006l1.539 1.528L6.772 8.3l5.69 5.7L14 12.461z" />
-            </svg>
-          </button>
+            <X aria-hidden className="size-[1.05rem]" strokeWidth={2.25} />
+          </button> */}
           {listedWallets.length ? (
             <>
-              <h1 className="wallet-adapter-modal-title" id="wallet-adapter-modal-title">
-                Connect a wallet on Solana to continue
+              <h1
+                className="maple-wallet-connect__title wallet-adapter-modal-title"
+                id="wallet-adapter-modal-title"
+              >
+                Connect a wallet to continue
               </h1>
-              <ul className="wallet-adapter-modal-list">
+              <ul className="maple-wallet-connect__list wallet-adapter-modal-list">
                 {listedWallets.map((wallet) => (
                   <MapleWalletListItem
                     key={wallet.adapter.name}
@@ -300,7 +334,7 @@ export function MapleWalletModal({
               </ul>
               {collapsedWallets.length ? (
                 <button
-                  className="wallet-adapter-modal-list-more"
+                  className="maple-wallet-connect__more wallet-adapter-modal-list-more"
                   onClick={handleCollapseClick}
                   tabIndex={0}
                   type="button"
@@ -325,16 +359,19 @@ export function MapleWalletModal({
             </>
           ) : (
             <>
-              <h1 className="wallet-adapter-modal-title" id="wallet-adapter-modal-title">
+              <h1
+                className="maple-wallet-connect__title wallet-adapter-modal-title"
+                id="wallet-adapter-modal-title"
+              >
                 You&apos;ll need a wallet on Solana to continue
               </h1>
-              <div className="wallet-adapter-modal-middle">
+              <div className="wallet-adapter-modal-middle maple-wallet-connect__middle">
                 <WalletPlaceholderGraphic />
               </div>
               {collapsedWallets.length ? (
                 <>
                   <button
-                    className="wallet-adapter-modal-list-more"
+                    className="maple-wallet-connect__more wallet-adapter-modal-list-more"
                     onClick={handleCollapseClick}
                     tabIndex={0}
                     type="button"
@@ -356,7 +393,7 @@ export function MapleWalletModal({
                     </svg>
                   </button>
                   <Collapse expanded={expanded} id="wallet-adapter-modal-collapse">
-                    <ul className="wallet-adapter-modal-list">
+                    <ul className="maple-wallet-connect__list wallet-adapter-modal-list">
                       {collapsedWallets.map((wallet) => (
                         <MapleWalletListItem
                           key={wallet.adapter.name}
@@ -375,11 +412,6 @@ export function MapleWalletModal({
           )}
         </div>
       </div>
-      <div
-        className="wallet-adapter-modal-overlay"
-        onMouseDown={handleClose}
-        role="presentation"
-      />
     </div>,
     portal,
   );

@@ -52,7 +52,7 @@ export type EditorialRow = {
   slug: string;
 };
 
-export type FavoriteRow = { name: string; cat: string; slug: string };
+export type FavoriteRow = { name: string; cat: string; slug: string; logo: string };
 
 /** Animated category chips: all use the same responsive wrapper + optional `size` prop. */
 export type CategoryLauncherIcon =
@@ -138,9 +138,9 @@ const EDITORIAL_DEFI: EditorialRow[] = [
 ];
 
 const FAVORITES_DEFI: FavoriteRow[] = [
-  { name: "Marinade", cat: "Liquid staking", slug: "marinade" },
-  { name: "Drift", cat: "Perps", slug: "drift" },
-  { name: "Meteora", cat: "Liquidity", slug: "meteora" },
+  { name: "Marinade", cat: "Liquid staking", slug: "marinade", logo: L_MARINADE },
+  { name: "Drift", cat: "Perps", slug: "drift", logo: L_DRIFT },
+  { name: "Meteora", cat: "Liquidity", slug: "meteora", logo: L_JUP },
 ];
 
 const DISCOVER_GAMES: DiscoverRow[] = [
@@ -180,9 +180,9 @@ const EDITORIAL_GAMES: EditorialRow[] = [
 ];
 
 const FAVORITES_GAMES: FavoriteRow[] = [
-  { name: "Star Atlas", cat: "Space MMO", slug: "star-atlas" },
-  { name: "Aurory", cat: "RPG", slug: "aurory" },
-  { name: "Genopets", cat: "Pet battles", slug: "genopets" },
+  { name: "Star Atlas", cat: "Space MMO", slug: "star-atlas", logo: L_JUP },
+  { name: "Aurory", cat: "RPG", slug: "aurory", logo: L_TENSOR },
+  { name: "Genopets", cat: "Pet battles", slug: "genopets", logo: L_MARINADE },
 ];
 
 const DISCOVER_INFRA: DiscoverRow[] = [
@@ -222,9 +222,9 @@ const EDITORIAL_INFRA: EditorialRow[] = [
 ];
 
 const FAVORITES_INFRA: FavoriteRow[] = [
-  { name: "Helius", cat: "RPC", slug: "helius" },
-  { name: "QuickNode", cat: "Endpoints", slug: "quicknode" },
-  { name: "Shyft", cat: "Indexing", slug: "shyft" },
+  { name: "Helius", cat: "RPC", slug: "helius", logo: L_JUP },
+  { name: "QuickNode", cat: "Endpoints", slug: "quicknode", logo: L_TENSOR },
+  { name: "Shyft", cat: "Indexing", slug: "shyft", logo: L_MARINADE },
 ];
 
 const DISCOVER_SOCIAL: DiscoverRow[] = [
@@ -264,9 +264,9 @@ const EDITORIAL_SOCIAL: EditorialRow[] = [
 ];
 
 const FAVORITES_SOCIAL: FavoriteRow[] = [
-  { name: "Dialect", cat: "Chat", slug: "dialect" },
-  { name: "Access", cat: "Passes", slug: "access" },
-  { name: "Grape", cat: "Communities", slug: "grape" },
+  { name: "Dialect", cat: "Chat", slug: "dialect", logo: L_JUP },
+  { name: "Access", cat: "Passes", slug: "access", logo: L_TENSOR },
+  { name: "Grape", cat: "Communities", slug: "grape", logo: L_ME },
 ];
 
 const DISCOVER_DAO: DiscoverRow[] = [
@@ -306,9 +306,9 @@ const EDITORIAL_DAO: EditorialRow[] = [
 ];
 
 const FAVORITES_DAO: FavoriteRow[] = [
-  { name: "Realms", cat: "Governance", slug: "realms" },
-  { name: "Squads", cat: "Multisig", slug: "squads" },
-  { name: "Streamflow", cat: "Vesting", slug: "streamflow" },
+  { name: "Realms", cat: "Governance", slug: "realms", logo: L_JUP },
+  { name: "Squads", cat: "Multisig", slug: "squads", logo: L_TENSOR },
+  { name: "Streamflow", cat: "Vesting", slug: "streamflow", logo: L_ME },
 ];
 
 export const CATEGORY_TAB_CONTENT: Record<CategoryId, CategoryTabContent> = {
